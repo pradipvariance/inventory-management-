@@ -23,10 +23,12 @@ const Header = () => {
     };
 
     useEffect(() => {
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 60000); // Poll every minute
-        return () => clearInterval(interval);
-    }, []);
+        if (user?.role !== 'SUPER_ADMIN') {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const handleApprove = async (id) => {
         try {
@@ -56,75 +58,80 @@ const Header = () => {
     return (
         <header className="bg-white shadow-sm h-20 flex items-center justify-between px-8 z-20 sticky top-0 border-b border-gray-100">
             {/* Left Side - Welcome Message */}
-            <div>
-                <h2 className="text-2xl font-bold text-gray-800 tracking-tight">
-                    Inventory<span className="text-indigo-600">Managment</span>
-                </h2>
-                <p className="text-sm text-gray-500 font-medium hidden md:block">
-                    Manage your inventory efficiently
-                </p>
+            {/* Left Side - Warehouse Context */}
+            <div className="flex flex-col">
+                {user?.warehouse?.name ? (
+                    <>
+                        <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">Current Warehouse</span>
+                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">{user.warehouse.name}</h2>
+                    </>
+                ) : (
+                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">Inventory Management System</h2>
+                )}
             </div>
 
             {/* Right Side - Actions */}
             <div className="flex items-center gap-6">
 
                 {/* Notification Bell */}
-                <div className="relative">
-                    <button
-                        onClick={() => setShowNotifications(!showNotifications)}
-                        className="p-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 relative group"
-                    >
-                        <Bell size={22} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                        {notifications.length > 0 && (
-                            <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-                        )}
-                    </button>
+                {user?.role !== 'SUPER_ADMIN' && (
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowNotifications(!showNotifications)}
+                            className="p-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 relative group"
+                        >
+                            <Bell size={22} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
+                            {notifications.length > 0 && (
+                                <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                            )}
+                        </button>
 
-                    {showNotifications && (
-                        <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fade-in">
-                            <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
-                                <span className="font-semibold text-gray-800">Notifications</span>
-                                {notifications.length > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">{notifications.length} New</span>}
-                            </div>
-                            <div className="max-h-80 overflow-y-auto">
-                                {notifications.length === 0 ? (
-                                    <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
-                                        <Bell size={32} className="mb-2 opacity-20" />
-                                        No new notifications
-                                    </div>
-                                ) : (
-                                    notifications.map(notif => (
-                                        <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <p className="text-sm font-medium text-gray-900">Transfer Request</p>
-                                                <span className="text-xs text-gray-400">Just now</span>
-                                            </div>
-                                            <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                                                <span className="font-semibold text-gray-700">{notif.fromWarehouse.name}</span> requests
-                                                <span className="font-bold text-gray-800"> {notif.itemQuantity} </span>
-                                                units of <span className="font-medium text-indigo-600">{notif.product.name}</span>.
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={() => handleApprove(notif.id)}
-                                                    className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm cursor-pointer"
-                                                >
-                                                    Approve
-                                                </button>
-                                                <button
-                                                    onClick={() => handleReject(notif.id)}
-                                                    className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
-                                                >
-                                                    Reject
-                                                </button>
-                                            </div>
+                        {showNotifications && (
+                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fade-in">
+                                <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
+                                    <span className="font-semibold text-gray-800">Notifications</span>
+                                    {notifications.length > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">{notifications.length} New</span>}
+                                </div>
+                                <div className="max-h-80 overflow-y-auto">
+                                    {notifications.length === 0 ? (
+                                        <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
+                                            <Bell size={32} className="mb-2 opacity-20" />
+                                            No new notifications
                                         </div>
-                                    ))
-                                )}
+                                    ) : (
+                                        notifications.map(notif => (
+                                            <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <p className="text-sm font-medium text-gray-900">Transfer Request</p>
+                                                    <span className="text-xs text-gray-400">Just now</span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                                                    <span className="font-semibold text-gray-700">{notif.fromWarehouse.name}</span> requests
+                                                    <span className="font-bold text-gray-800"> {notif.itemQuantity} </span>
+                                                    units of <span className="font-medium text-indigo-600">{notif.product.name}</span>.
+                                                </p>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleApprove(notif.id)}
+                                                        className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm cursor-pointer"
+                                                    >
+                                                        Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleReject(notif.id)}
+                                                        className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Vertical Divider */}
                 <div className="h-8 w-px bg-gray-200"></div>

@@ -150,8 +150,8 @@ const Products = () => {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    {/* Add Product button visible to non-WAREHOUSE_ADMIN users */}
-                    {user?.role !== 'WAREHOUSE_ADMIN' && (
+                    {/* Add Product button visible to non-WAREHOUSE_ADMIN and non-SUPER_ADMIN users */}
+                    {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
                         <button
                             onClick={() => setShowModal(true)}
                             className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
@@ -172,7 +172,7 @@ const Products = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                            {user?.role !== 'WAREHOUSE_ADMIN' && (
+                            {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                             )}
                         </tr>
@@ -194,7 +194,7 @@ const Products = () => {
                                         {product.unitType}
                                     </span>
                                 </td>
-                                {user?.role !== 'WAREHOUSE_ADMIN' && (
+                                {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
                                     </td>

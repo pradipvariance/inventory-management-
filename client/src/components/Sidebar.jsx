@@ -14,10 +14,10 @@ const Sidebar = () => {
         { name: 'Inventory', href: '/inventory', icon: ShoppingCart, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN'] },
         { name: 'Adjustments', href: '/adjustments', icon: FileText, roles: ['SUPER_ADMIN'] },
-        { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER', 'SUPER_ADMIN'] },
+        { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER'] },
         { name: 'Cart', href: '/cart', icon: ShoppingCart, roles: ['CUSTOMER'] },
-        { name: 'Orders', href: '/orders', icon: FileText, roles: ['CUSTOMER', 'SUPER_ADMIN'] },
-        { name: 'Suppliers', href: '/suppliers', icon: Users, roles: ['SUPER_ADMIN'] },
+        { name: 'Orders', href: '/orders', icon: FileText, roles: ['CUSTOMER'] },
+        { name: 'Suppliers', href: '/suppliers', icon: Users, roles: [] },
         { name: 'Purchase Orders', href: '/purchase-orders', icon: FileText, roles: ['SUPPLIER', 'SUPER_ADMIN'] },
     ];
 
@@ -25,8 +25,10 @@ const Sidebar = () => {
 
     return (
         <div className="flex flex-col w-64 bg-gray-800 text-white">
-            <div className="flex items-center justify-center h-20 shadow-md">
-                <h1 className="text-3xl font-bold"></h1>
+            <div className="flex flex-col items-center justify-center h-20 shadow-md border-b border-gray-700 bg-gray-900 px-4 text-center">
+                <h1 className="text-sm font-bold text-white uppercase tracking-wider">
+                    {user?.role?.replace('_', ' ')} Dashboard
+                </h1>
             </div>
             <ul className="flex-col py-4">
                 {navigation.map((item) => {

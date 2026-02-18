@@ -4,13 +4,14 @@ import { z } from 'zod';
 const warehouseSchema = z.object({
     name: z.string().min(2),
     location: z.string().min(3),
+    capacity: z.number().int().positive().optional().default(1000),
 });
 
 export const createWarehouse = async (req, res) => {
     try {
-        const { name, location } = warehouseSchema.parse(req.body);
+        const { name, location, capacity } = warehouseSchema.parse(req.body);
         const warehouse = await prisma.warehouse.create({
-            data: { name, location },
+            data: { name, location, capacity },
         });
         res.status(201).json(warehouse);
     } catch (error) {
@@ -50,10 +51,10 @@ export const getWarehouse = async (req, res) => {
 
 export const updateWarehouse = async (req, res) => {
     try {
-        const { name, location } = warehouseSchema.parse(req.body);
+        const { name, location, capacity } = warehouseSchema.parse(req.body);
         const warehouse = await prisma.warehouse.update({
             where: { id: req.params.id },
-            data: { name, location },
+            data: { name, location, capacity },
         });
         res.json(warehouse);
     } catch (error) {

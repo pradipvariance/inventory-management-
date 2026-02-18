@@ -87,7 +87,7 @@ const StockTransfers = () => {
 
     if (loading) return <div>Loading...</div>;
 
-    const canApprove = user?.role === 'WAREHOUSE_ADMIN' || user?.role === 'SUPER_ADMIN';
+    const canApprove = user?.role === 'WAREHOUSE_ADMIN';
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
