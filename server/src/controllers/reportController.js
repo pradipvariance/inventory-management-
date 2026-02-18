@@ -21,13 +21,12 @@ export const getDashboardStats = async (req, res) => {
 
         const [productCount, orderCount, warehouseCount, supplierCount] = await Promise.all([
             prisma.product.count(), // Global products
-            prisma.order.count(),   // Global orders (or 0 if we want to strict)
+            prisma.order.count(),   // Global orders 
             prisma.warehouse.count(),
             prisma.supplier.count()
         ]);
 
         // Calculate total revenue from Orders
-        // If Warehouse Admin, maybe we shouldn't show total company revenue?
         let totalRevenue = 0;
         if (role !== 'WAREHOUSE_ADMIN') {
             const orders = await prisma.order.findMany({ select: { totalAmount: true } });
@@ -38,13 +37,19 @@ export const getDashboardStats = async (req, res) => {
             where: whereInventory
         });
 
+        // Inventory Count (Specific to warehouse or global)
+        const inventoryCount = await prisma.inventory.count({
+            where: role === 'WAREHOUSE_ADMIN' ? { warehouseId } : {}
+        });
+
         res.json({
-            productCount,
-            orderCount: role === 'WAREHOUSE_ADMIN' ? 0 : orderCount, // Hide global orders count?
-            warehouseCount,
-            supplierCount,
+            productCount, // They can see total products available in system
+            orderCount: role === 'WAREHOUSE_ADMIN' ? 0 : orderCount,
+            warehouseCount: role === 'WAREHOUSE_ADMIN' ? 1 : warehouseCount,
+            supplierCount: role === 'WAREHOUSE_ADMIN' ? 0 : supplierCount,
             totalRevenue,
-            lowStockCount
+            lowStockCount,
+            inventoryCount
         });
     } catch (error) {
         res.status(500).json({ message: error.message });

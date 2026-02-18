@@ -10,9 +10,9 @@ const Sidebar = () => {
     const allNavigation = [
         { name: 'Dashboard', href: '/', icon: Home, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Warehouses', href: '/warehouses', icon: Truck, roles: ['SUPER_ADMIN'] },
-        { name: 'Products', href: '/products', icon: Package, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
+        { name: 'Products', href: '/products', icon: Package, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'] },
         { name: 'Inventory', href: '/inventory', icon: ShoppingCart, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
+        { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Adjustments', href: '/adjustments', icon: FileText, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER', 'SUPER_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Cart', href: '/cart', icon: ShoppingCart, roles: ['CUSTOMER'] },
