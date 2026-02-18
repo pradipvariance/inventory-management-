@@ -160,6 +160,7 @@ export const getTransfers = async (req, res) => {
         let where = {};
 
         if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+            // Warehouse Admin sees transfers related to their warehouse
             where = {
                 OR: [
                     { fromWarehouseId: req.user.warehouseId },
@@ -182,6 +183,36 @@ export const getTransfers = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
         res.json(transfers);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const getPendingTransfersCount = async (req, res) => {
+    try {
+        const { warehouseId, role } = req.user;
+        let where = { status: 'PENDING' };
+
+        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
+            // Only show incoming transfers that need approval
+            where.toWarehouseId = warehouseId;
+        } else if (role === 'SUPER_ADMIN') {
+            // Super Admin sees all pending? Or maybe none specifically for "My Actions"
+            // For now let's return all pending for Super Admin
+        }
+
+        const count = await prisma.stockTransfer.count({ where });
+        const transfers = await prisma.stockTransfer.findMany({
+            where,
+            include: {
+                product: true,
+                fromWarehouse: true,
+                toWarehouse: true,
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json({ count, transfers });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

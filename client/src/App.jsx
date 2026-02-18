@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { CartProvider } from './context/CartContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Warehouses from './pages/Warehouses';
@@ -15,7 +17,6 @@ import Orders from './pages/Orders';
 import Suppliers from './pages/Suppliers';
 import PurchaseOrders from './pages/PurchaseOrders';
 import Unauthorized from './pages/Unauthorized';
-import { CartProvider } from './context/CartContext';
 
 function App() {
   return (
@@ -27,16 +28,6 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* Admin Routes */}
-            {/* Super Admin & Inventory Manager Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'INVENTORY_MANAGER']} />}>
-              <Route element={<Layout />}>
-                <Route path="/products" element={<Products />} />
-                <Route path="/adjustments" element={<Adjustments />} />
-                <Route path="/suppliers" element={<Suppliers />} />
-              </Route>
-            </Route>
-
             {/* Super Admin Only Routes */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
@@ -44,10 +35,19 @@ function App() {
               </Route>
             </Route>
 
-            {/* Shared Admin Routes (Inc. Warehouse Admin) */}
+            {/* Super Admin & Inventory Manager Routes (Excluding Products which is now shared) */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'INVENTORY_MANAGER']} />}>
+              <Route element={<Layout />}>
+                <Route path="/adjustments" element={<Adjustments />} />
+                <Route path="/suppliers" element={<Suppliers />} />
+              </Route>
+            </Route>
+
+            {/* Shared Admin Routes (Super Admin, Warehouse Admin, Inventory Manager) */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER']} />}>
               <Route element={<Layout />}>
-                <Route path="/" element={<div className="font-bold text-2xl">Dashboard Home</div>} />
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/products" element={<Products />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/transfers" element={<StockTransfers />} />
               </Route>
