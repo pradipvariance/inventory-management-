@@ -7,6 +7,7 @@ import {
     updateProduct,
     deleteProduct,
     bulkImportProducts,
+    debugInventory
 } from '../controllers/productController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -20,6 +21,8 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 const router = express.Router();
+
+router.get('/debug', debugInventory);
 
 router.route('/')
     .post(protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'), upload.single('image'), createProduct)

@@ -17,8 +17,26 @@ export const getDashboardStats = async (req, res) => {
             // Let's allow them to see total product count (global) but only their inventory specific low stock.
         }
 
-        const [productCount, orderCount, warehouseCount, supplierCount] = await Promise.all([
-            prisma.product.count(), // Global products
+
+        let productCount;
+        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
+            // Strict filtering: Count products available in THIS warehouse
+            const validInventory = await prisma.inventory.findMany({
+                where: {
+                    warehouseId: warehouseId,
+                    itemQuantity: { gt: 0 }
+                },
+                select: { productId: true }
+            });
+            const validProductIds = validInventory.map(i => i.productId);
+            productCount = await prisma.product.count({
+                where: { id: { in: validProductIds } }
+            });
+        } else {
+            productCount = await prisma.product.count();
+        }
+
+        const [orderCount, warehouseCount, supplierCount] = await Promise.all([
             prisma.order.count(),   // Global orders 
             prisma.warehouse.count(),
             prisma.supplier.count()

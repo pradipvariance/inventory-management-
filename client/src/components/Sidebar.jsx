@@ -12,13 +12,13 @@ const Sidebar = () => {
         { name: 'Warehouses', href: '/warehouses', icon: Truck, roles: ['SUPER_ADMIN'] },
         { name: 'Products', href: '/products', icon: Package, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'] },
         { name: 'Inventory', href: '/inventory', icon: ShoppingCart, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Adjustments', href: '/adjustments', icon: FileText, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER', 'SUPER_ADMIN', 'INVENTORY_MANAGER'] },
+        { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN'] },
+        { name: 'Adjustments', href: '/adjustments', icon: FileText, roles: ['SUPER_ADMIN'] },
+        { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER', 'SUPER_ADMIN'] },
         { name: 'Cart', href: '/cart', icon: ShoppingCart, roles: ['CUSTOMER'] },
-        { name: 'Orders', href: '/orders', icon: FileText, roles: ['CUSTOMER', 'SUPER_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Suppliers', href: '/suppliers', icon: Users, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER'] },
-        { name: 'Purchase Orders', href: '/purchase-orders', icon: FileText, roles: ['SUPPLIER', 'SUPER_ADMIN', 'INVENTORY_MANAGER'] },
+        { name: 'Orders', href: '/orders', icon: FileText, roles: ['CUSTOMER', 'SUPER_ADMIN'] },
+        { name: 'Suppliers', href: '/suppliers', icon: Users, roles: ['SUPER_ADMIN'] },
+        { name: 'Purchase Orders', href: '/purchase-orders', icon: FileText, roles: ['SUPPLIER', 'SUPER_ADMIN'] },
     ];
 
     const navigation = allNavigation.filter(item => item.roles.includes(user?.role));
