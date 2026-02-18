@@ -6,7 +6,7 @@ const Warehouses = () => {
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [formData, setFormData] = useState({ name: '', location: '' });
+    const [formData, setFormData] = useState({ name: '', location: '', capacity: 1000 });
 
     const fetchWarehouses = async () => {
         try {
@@ -30,10 +30,13 @@ const Warehouses = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/warehouses', formData, {
+            await axios.post('http://localhost:5000/api/warehouses', {
+                ...formData,
+                capacity: parseInt(formData.capacity)
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setFormData({ name: '', location: '' });
+            setFormData({ name: '', location: '', capacity: 1000 });
             setShowModal(false);
             fetchWarehouses();
         } catch (error) {
@@ -76,6 +79,7 @@ const Warehouses = () => {
                         <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
@@ -85,6 +89,7 @@ const Warehouses = () => {
                             <tr key={warehouse.id}>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{warehouse.name}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.location}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.capacity}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(warehouse.createdAt).toLocaleDateString()}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <button onClick={() => handleDelete(warehouse.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
@@ -118,6 +123,16 @@ const Warehouses = () => {
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                />
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700">Capacity</label>
+                                <input
+                                    type="number"
+                                    required
+                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+                                    value={formData.capacity}
+                                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
                                 />
                             </div>
                             <div className="flex justify-end gap-2">

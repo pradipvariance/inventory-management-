@@ -17,8 +17,14 @@ const Register = () => {
         setError('');
         setLoading(true);
         try {
-            await register(name, email, password); // Default role is CUSTOMER
-            navigate('/');
+            await register(name, email, password);
+            // Redirect based on role
+            // Since register doesn't return the user object directly in the current context implementation, 
+            // we can assume CUSTOMER for now as it's the default, or fetch the user from context if updated immediately.
+            // However, context updates are asynchronous. 
+            // Better approach: Update register in AuthContext to return the user, or default to /shop for customers.
+            // For now, let's default to /shop if it's a customer registration (which it is by default in the UI)
+            navigate('/shop');
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');
         } finally {

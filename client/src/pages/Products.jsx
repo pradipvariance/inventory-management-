@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { Plus, Trash2, Edit, Search, Filter } from 'lucide-react';
+import AuthContext from '../context/AuthContext';
 
 const Products = () => {
+    const { user } = useContext(AuthContext);
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -110,12 +112,15 @@ const Products = () => {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
-                    >
-                        <Plus size={20} /> Add Product
-                    </button>
+                    {/* Add Product button visible to non-WAREHOUSE_ADMIN and non-SUPER_ADMIN users */}
+                    {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
+                        >
+                            <Plus size={20} /> Add Product
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -129,7 +134,9 @@ const Products = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -137,7 +144,7 @@ const Products = () => {
                             <tr key={product.id}>
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     {product.image ?
-                                        <img src={`http://localhost:5000/${product.image}`} alt={product.name} className="h-10 w-10 object-cover rounded" />
+                                        <img src={`/${product.image}`} alt={product.name} className="h-10 w-10 object-cover rounded" />
                                         : <div className="h-10 w-10 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-500">No Img</div>}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
@@ -149,9 +156,11 @@ const Products = () => {
                                         {product.unitType}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
-                                </td>
+                                {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>

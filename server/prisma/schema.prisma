@@ -36,7 +36,7 @@ enum OrderStatus {
 enum PurchaseOrderStatus {
   PENDING
   CONFIRMED
-  DELIVERED
+  DELIVERED 
   RECEIVED
   CANCELLED
 }
