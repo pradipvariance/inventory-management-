@@ -6,7 +6,13 @@ import AuthContext from '../context/AuthContext';
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
-    const [stats, setStats] = useState(null);
+    const [stats, setStats] = useState({
+        totalRevenue: 0,
+        orderCount: 0,
+        productCount: 0,
+        lowStockCount: 0,
+        inventoryCount: 0
+    });
     const [salesData, setSalesData] = useState([]);
     const [lowStock, setLowStock] = useState([]);
     const [products, setProducts] = useState([]);
@@ -19,23 +25,31 @@ const Dashboard = () => {
                 const token = localStorage.getItem('token');
                 const config = { headers: { Authorization: `Bearer ${token}` } };
 
-                const [statsRes, salesRes, stockRes] = await Promise.all([
-                    axios.get('http://localhost:5000/api/reports/stats', config),
-                    axios.get('http://localhost:5000/api/reports/sales', config),
-                    axios.get('http://localhost:5000/api/reports/low-stock', config)
-                ]);
-
-                setStats(statsRes.data);
-                setSalesData(salesRes.data);
-                setLowStock(stockRes.data);
-
-                if (user?.role === 'WAREHOUSE_ADMIN') {
-                    const [prodRes, invRes] = await Promise.all([
-                        axios.get('http://localhost:5000/api/products?limit=5', config),
-                        axios.get(`http://localhost:5000/api/inventory?limit=5&warehouseId=${user.warehouseId}`, config)
+                // Fetch basic stats - handle errors individually if needed or as a group
+                try {
+                    const [statsRes, salesRes, stockRes] = await Promise.all([
+                        axios.get('http://localhost:5000/api/reports/stats', config),
+                        axios.get('http://localhost:5000/api/reports/sales', config),
+                        axios.get('http://localhost:5000/api/reports/low-stock', config)
                     ]);
-                    setProducts(prodRes.data.products);
-                    setInventory(invRes.data.inventory);
+                    setStats(prev => ({ ...prev, ...statsRes.data }));
+                    setSalesData(salesRes.data || []);
+                    setLowStock(stockRes.data || []);
+                } catch (err) {
+                    console.error("Failed to load core stats", err);
+                }
+
+                if (user?.role === 'WAREHOUSE_ADMIN' && user.warehouseId) {
+                    try {
+                        const [prodRes, invRes] = await Promise.all([
+                            axios.get('http://localhost:5000/api/products?limit=5', config),
+                            axios.get(`http://localhost:5000/api/inventory?limit=5&warehouseId=${user.warehouseId}`, config)
+                        ]);
+                        setProducts(prodRes.data.products || []);
+                        setInventory(invRes.data.inventory || []);
+                    } catch (err) {
+                        console.error("Failed to load warehouse specific data", err);
+                    }
                 }
 
             } catch (error) {
@@ -48,14 +62,16 @@ const Dashboard = () => {
     }, [user]);
 
     if (loading) return <div>Loading Dashboard...</div>;
-    if (!stats) return <div>Error loading data.</div>;
+
+    // Fallback constants if stats are missing (though state init covers most)
+    const safeStats = stats || { totalRevenue: 0, orderCount: 0, productCount: 0, lowStockCount: 0, inventoryCount: 0 };
 
     const statCards = [
-        { title: 'Total Revenue', value: `$${stats.totalRevenue.toFixed(2)}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-100', show: user.role !== 'WAREHOUSE_ADMIN' },
-        { title: 'Total Orders', value: stats.orderCount, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-100', show: user.role !== 'WAREHOUSE_ADMIN' },
-        { title: 'Products', value: stats.productCount, icon: Package, color: 'text-indigo-600', bg: 'bg-indigo-100', show: true },
-        { title: 'Low Stock Items', value: stats.lowStockCount, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', show: true },
-        { title: 'Inventory Count', value: stats.inventoryCount || 0, icon: Layers, color: 'text-purple-600', bg: 'bg-purple-100', show: user.role === 'WAREHOUSE_ADMIN' },
+        { title: 'Total Revenue', value: `$${(safeStats.totalRevenue || 0).toFixed(2)}`, icon: DollarSign, color: 'text-green-600', bg: 'bg-green-100', show: user.role !== 'WAREHOUSE_ADMIN' },
+        { title: 'Total Orders', value: safeStats.orderCount || 0, icon: ShoppingCart, color: 'text-blue-600', bg: 'bg-blue-100', show: user.role !== 'WAREHOUSE_ADMIN' },
+        { title: 'Products', value: safeStats.productCount || 0, icon: Package, color: 'text-indigo-600', bg: 'bg-indigo-100', show: true },
+        { title: 'Low Stock Items', value: safeStats.lowStockCount || 0, icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-100', show: true },
+        { title: 'Inventory Count', value: safeStats.inventoryCount || 0, icon: Layers, color: 'text-purple-600', bg: 'bg-purple-100', show: user.role === 'WAREHOUSE_ADMIN' },
     ];
 
     return (
@@ -112,8 +128,8 @@ const Dashboard = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {lowStock.map(item => (
                                     <tr key={item.id}>
-                                        <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.product.name}</td>
-                                        <td className="px-3 py-2 text-sm text-gray-500">{item.warehouse.name}</td>
+                                        <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.product?.name || 'Unknown'}</td>
+                                        <td className="px-3 py-2 text-sm text-gray-500">{item.warehouse?.name || 'Unknown'}</td>
                                         <td className="px-3 py-2 text-sm text-red-600 font-bold">{item.itemQuantity}</td>
                                     </tr>
                                 ))}
@@ -157,7 +173,7 @@ const Dashboard = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {inventory.map(item => (
                                     <tr key={item.id}>
-                                        <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.product.name}</td>
+                                        <td className="px-3 py-2 text-sm font-medium text-gray-900">{item.product?.name || 'Unknown'}</td>
                                         <td className="px-3 py-2 text-sm text-gray-500">{item.itemQuantity} / {item.boxQuantity} Boxes</td>
                                     </tr>
                                 ))}

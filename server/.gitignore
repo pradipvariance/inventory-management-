@@ -36,3 +36,9 @@ coverage/
 
 # Uploads
 uploads/
+
+
+node_modules
+ 
+.env
+ 

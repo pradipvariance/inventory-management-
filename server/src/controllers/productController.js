@@ -64,6 +64,14 @@ export const getProducts = async (req, res) => {
             where.category = category;
         }
 
+        if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+            where.inventory = {
+                some: {
+                    warehouseId: req.user.warehouseId
+                }
+            };
+        }
+
         const [productsData, total] = await prisma.$transaction([
             prisma.product.findMany({
                 where,
