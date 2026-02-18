@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 const generateTokens = (id) => {
     const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '15m',
+        expiresIn: '2d',
     });
     const refreshToken = jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
         expiresIn: '7d',
@@ -58,14 +58,24 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { warehouse: { select: { name: true } } }
+        });
 
         if (user && (await bcrypt.compare(password, user.password))) {
             if (!user.status) return res.status(403).json({ message: 'Account disabled' });
 
             const tokens = generateTokens(user.id);
             res.json({
-                user: { id: user.id, name: user.name, email: user.email, role: user.role, warehouseId: user.warehouseId },
+                user: {
+                    id: user.id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                    warehouseId: user.warehouseId,
+                    warehouse: user.warehouse
+                },
                 ...tokens,
             });
         } else {

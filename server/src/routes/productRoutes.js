@@ -22,7 +22,7 @@ const upload = multer({ storage });
 const router = express.Router();
 
 router.route('/')
-    .post(protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER'), upload.single('image'), createProduct)
+    .post(protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'), upload.single('image'), createProduct)
     .get(protect, getProducts);
 
 router.post('/import', protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER'), upload.single('file'), bulkImportProducts);

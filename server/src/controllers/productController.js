@@ -39,6 +39,19 @@ export const createProduct = async (req, res) => {
         }
 
         const product = await prisma.product.create({ data });
+
+        // If Warehouse Admin created this, automatically add to their inventory
+        if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+            await prisma.inventory.create({
+                data: {
+                    productId: product.id,
+                    warehouseId: req.user.warehouseId,
+                    itemQuantity: 0,
+                    boxQuantity: 0
+                }
+            });
+        }
+
         res.status(201).json(product);
     } catch (error) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);

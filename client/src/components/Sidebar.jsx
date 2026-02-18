@@ -26,7 +26,7 @@ const Sidebar = () => {
     return (
         <div className="flex flex-col w-64 bg-gray-800 text-white">
             <div className="flex items-center justify-center h-20 shadow-md">
-                <h1 className="text-3xl font-bold">IMS</h1>
+                <h1 className="text-3xl font-bold"></h1>
             </div>
             <ul className="flex-col py-4">
                 {navigation.map((item) => {
