@@ -3,12 +3,10 @@ import prisma from '../prisma.js';
 export const getDashboardStats = async (req, res) => {
     try {
         const { role, warehouseId } = req.user;
-        let whereInventory = { itemQuantity: { lt: 10 } };
         let whereOrder = {};
 
         if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
             // For stats, we might want to only show inventory in their warehouse
-            whereInventory.warehouseId = warehouseId;
             // Orders: maybe only orders that have items from this warehouse? 
             // Or if orders are not warehouse-specific yet, maybe show 0 or hide?
             // Since orders are linked to customers, and we hidden customers, maybe we hide order stats too.
@@ -33,9 +31,23 @@ export const getDashboardStats = async (req, res) => {
             totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
         }
 
-        const lowStockCount = await prisma.inventory.count({
-            where: whereInventory
-        });
+        // Calculate low stock count using raw query for accuracy vs product.minStockLevel
+        let lowStockCountResult;
+        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
+            lowStockCountResult = await prisma.$queryRaw`
+                SELECT COUNT(*)::int as count FROM "Inventory" i
+                JOIN "Product" p ON i."productId" = p.id
+                WHERE i."itemQuantity" <= p."minStockLevel"
+                AND i."warehouseId" = ${warehouseId}
+            `;
+        } else {
+            lowStockCountResult = await prisma.$queryRaw`
+                SELECT COUNT(*)::int as count FROM "Inventory" i
+                JOIN "Product" p ON i."productId" = p.id
+                WHERE i."itemQuantity" <= p."minStockLevel"
+            `;
+        }
+        const lowStockCount = lowStockCountResult[0]?.count || 0;
 
         // Inventory Count (Specific to warehouse or global)
         const inventoryCount = await prisma.inventory.count({
@@ -105,22 +117,43 @@ export const getSalesChart = async (req, res) => {
 export const getLowStockItems = async (req, res) => {
     try {
         const { role, warehouseId } = req.user;
-        let where = { itemQuantity: { lt: 10 } };
+
+        // Use raw query to compare inventory quantity with product minStockLevel
+        // We only start with a basic query and append warehouse condition if needed
+        let lowStockIds;
 
         if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
-            where.warehouseId = warehouseId;
+            lowStockIds = await prisma.$queryRaw`
+                SELECT i.id FROM "Inventory" i
+                JOIN "Product" p ON i."productId" = p.id
+                WHERE i."itemQuantity" <= p."minStockLevel"
+                AND i."warehouseId" = ${warehouseId}
+                LIMIT 5
+            `;
+        } else {
+            lowStockIds = await prisma.$queryRaw`
+                SELECT i.id FROM "Inventory" i
+                JOIN "Product" p ON i."productId" = p.id
+                WHERE i."itemQuantity" <= p."minStockLevel"
+                LIMIT 5
+            `;
         }
 
+        const ids = lowStockIds.map(item => item.id);
+
         const lowStockItems = await prisma.inventory.findMany({
-            where,
+            where: {
+                id: { in: ids }
+            },
             include: {
                 product: true,
                 warehouse: true
-            },
-            take: 5 // Top 5 urgent
+            }
         });
+
         res.json(lowStockItems);
     } catch (error) {
+        console.error("Error fetching low stock items:", error);
         res.status(500).json({ message: error.message });
     }
 };
