@@ -64,13 +64,13 @@ const Inventory = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {inventory.map((item) => (
                             <tr key={item.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.product.name}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.product.sku}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.warehouse.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.product?.name || 'Unknown Product'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.product?.sku || 'N/A'}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.warehouse?.name || 'Unknown Warehouse'}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{item.itemQuantity}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.boxQuantity}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {item.itemQuantity + (item.boxQuantity * (item.product.boxSize || 0))}
+                                    {(item.itemQuantity || 0) + ((item.boxQuantity || 0) * (item.product?.boxSize || 0))}
                                 </td>
                             </tr>
                         ))}

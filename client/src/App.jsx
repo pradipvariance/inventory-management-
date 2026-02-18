@@ -35,8 +35,8 @@ function App() {
               </Route>
             </Route>
 
-            {/* Super Admin & Inventory Manager Routes (Excluding Products which is now shared) */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'INVENTORY_MANAGER']} />}>
+            {/* Super Admin & Inventory Manager Routes (Excluding Products which is now shared) - UPDATED: Inventory Manager removed */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
                 <Route path="/adjustments" element={<Adjustments />} />
                 <Route path="/suppliers" element={<Suppliers />} />
@@ -49,24 +49,31 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/inventory" element={<Inventory />} />
+              </Route>
+            </Route>
+
+            {/* Transfers - NOW SUPER ADMIN ONLY */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+              <Route element={<Layout />}>
                 <Route path="/transfers" element={<StockTransfers />} />
               </Route>
             </Route>
 
             {/* Supplier Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPPLIER', 'SUPER_ADMIN', 'INVENTORY_MANAGER']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['SUPPLIER', 'SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
               </Route>
             </Route>
 
             {/* Customer/Shared Routes (Excluding Warehouse Admin from Shop/Orders as per request) */}
-            <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'SUPER_ADMIN', 'INVENTORY_MANAGER']} />}>
+            <Route element={<ProtectedRoute allowedRoles={['CUSTOMER', 'SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
                 <Route path="/shop" element={<Shop />} />
                 <Route path="/orders" element={<Orders />} />
               </Route>
             </Route>
+
 
             <Route element={<ProtectedRoute allowedRoles={['CUSTOMER']} />}>
               <Route element={<Layout />}>
@@ -77,7 +84,7 @@ function App() {
           </Routes>
         </CartProvider>
       </AuthProvider>
-    </Router>
+    </Router >
   );
 }
 

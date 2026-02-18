@@ -40,15 +40,31 @@ export const createProduct = async (req, res) => {
 
         const product = await prisma.product.create({ data });
 
-        // If Warehouse Admin created this, automatically add to their inventory
+        // Create Inventory record if Warehouse is specified (either by Admin or Form)
+        let targetWarehouseId = null;
         if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+            targetWarehouseId = req.user.warehouseId;
+        } else if (req.body.warehouseId) {
+            targetWarehouseId = req.body.warehouseId;
+        }
+
+        if (targetWarehouseId) {
+            const initialStock = req.body.initialStock ? parseInt(req.body.initialStock) : 0;
+            let itemData = {
+                productId: product.id,
+                warehouseId: targetWarehouseId,
+                itemQuantity: 0,
+                boxQuantity: 0
+            };
+
+            if (data.unitType === 'BOX') {
+                itemData.boxQuantity = initialStock;
+            } else {
+                itemData.itemQuantity = initialStock;
+            }
+
             await prisma.inventory.create({
-                data: {
-                    productId: product.id,
-                    warehouseId: req.user.warehouseId,
-                    itemQuantity: 0,
-                    boxQuantity: 0
-                }
+                data: itemData
             });
         }
 
@@ -64,6 +80,12 @@ export const getProducts = async (req, res) => {
     const { page = 1, limit = 10, search, category } = req.query;
     const skip = (page - 1) * limit;
 
+
+    console.log("--- DEBUG getProducts ---");
+    console.log("User:", req.user.email, "| ID:", req.user.id);
+    console.log("Role:", req.user.role);
+    console.log("WarehouseID:", req.user.warehouseId);
+
     try {
         const where = {};
         if (search) {
@@ -77,13 +99,32 @@ export const getProducts = async (req, res) => {
             where.category = category;
         }
 
-        if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
-            where.inventory = {
-                some: {
-                    warehouseId: req.user.warehouseId
-                }
-            };
+
+        // --- STRICT WAREHOUSE FILTERING START ---
+        // Sanitize role to avoid whitespace issues
+        const userRole = req.user.role ? req.user.role.trim() : '';
+        console.log(`Processing filter for Role: '${userRole}'`);
+
+        if (userRole === 'WAREHOUSE_ADMIN') {
+            if (!req.user.warehouseId) {
+                return res.json({ products: [], totalPages: 0, currentPage: parseInt(page), totalProducts: 0 });
+            }
+
+            // Step 1: Find all Product IDs that have STOCK > 0 in this warehouse
+            const validInventory = await prisma.inventory.findMany({
+                where: {
+                    warehouseId: req.user.warehouseId,
+                    itemQuantity: { gt: 0 }
+                },
+                select: { productId: true }
+            });
+
+            const validProductIds = validInventory.map(i => i.productId);
+
+            // Step 2: Add this ID constraint to the product query
+            where.id = { in: validProductIds };
         }
+        // --- STRICT WAREHOUSE FILTERING END ---
 
         const [productsData, total] = await prisma.$transaction([
             prisma.product.findMany({
@@ -97,7 +138,17 @@ export const getProducts = async (req, res) => {
         ]);
 
         const products = productsData.map(product => {
-            const totalStock = product.inventory.reduce((sum, item) => sum + item.itemQuantity, 0);
+            let totalStock = 0;
+            // Use sanitized role for check
+            if (userRole === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+                // Only count stock for this warehouse (Frontend display)
+                totalStock = product.inventory
+                    .filter(item => item.warehouseId === req.user.warehouseId)
+                    .reduce((sum, item) => sum + item.itemQuantity, 0);
+            } else {
+                // Count all stock
+                totalStock = product.inventory.reduce((sum, item) => sum + item.itemQuantity, 0);
+            }
             return { ...product, totalStock };
         });
 
@@ -107,7 +158,9 @@ export const getProducts = async (req, res) => {
             currentPage: parseInt(page),
             totalProducts: total,
         });
+
     } catch (error) {
+        console.error("getProducts Error:", error);
         res.status(500).json({ message: error.message });
     }
 };
@@ -203,4 +256,39 @@ export const bulkImportProducts = async (req, res) => {
                 errors: errors.length > 0 ? errors : undefined,
             });
         });
+};
+
+export const debugInventory = async (req, res) => {
+    try {
+        const warehouses = await prisma.warehouse.findMany({
+            include: {
+                inventory: {
+                    where: {
+                        OR: [
+                            { itemQuantity: { gt: 0 } },
+                            { boxQuantity: { gt: 0 } }
+                        ]
+                    },
+                    include: { product: true }
+                }
+            }
+        });
+
+        const result = warehouses.map(w => ({
+            warehouse: w.name,
+            id: w.id,
+            activeItemsCount: w.inventory.length,
+            items: w.inventory.map(i => ({
+                product: i.product.name,
+                sku: i.product.sku,
+                itemQty: i.itemQuantity,
+                boxQty: i.boxQuantity
+            }))
+        }));
+
+        const users = await prisma.user.findMany({ select: { name: true, email: true, role: true, warehouseId: true } });
+        res.json({ warehouses: result, users });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };

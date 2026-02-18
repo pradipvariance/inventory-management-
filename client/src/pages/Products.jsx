@@ -11,23 +11,54 @@ const Products = () => {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [error, setError] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+
+    const [warehouses, setWarehouses] = useState([]);
+
+    // -------------------
 
     const [formData, setFormData] = useState({
-        name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null
+        name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null,
+        warehouseId: '', initialStock: ''
     });
 
-    const [imagePreview, setImagePreview] = useState(null);
+    useEffect(() => {
+        const fetchWarehouses = async () => {
+            if (user?.role === 'WAREHOUSE_ADMIN') return;
+            try {
+                const token = localStorage.getItem('token');
+                const { data } = await axios.get('http://localhost:5000/api/warehouses', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (Array.isArray(data)) {
+                    setWarehouses(data);
+                } else {
+                    console.error("Unexpected warehouse data format:", data);
+                    setWarehouses([]);
+                }
+            } catch (error) {
+                console.error("Error fetching warehouses", error);
+                setWarehouses([]);
+            }
+        };
+        fetchWarehouses();
+    }, [user]);
 
     const fetchProducts = async () => {
         try {
+            setError(null);
             const token = localStorage.getItem('token');
             const { data } = await axios.get(`http://localhost:5000/api/products?page=${page}&search=${search}`, {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: { Authorization: `Bearer ${token}` },
+                timeout: 5000
             });
+            console.log("Fetched products:", data.products);
             setProducts(data.products);
-            setTotalPages(data.totalPages);
+            setTotalPages(data.totalPages || 1);
         } catch (error) {
             console.error('Error fetching products:', error);
+            setError("Failed to load products. " + (error.response?.data?.message || error.message));
         } finally {
             setLoading(false);
         }
@@ -45,8 +76,6 @@ const Products = () => {
         setFormData({ ...formData, image: file });
         if (file) {
             setImagePreview(URL.createObjectURL(file));
-        } else {
-            setImagePreview(null);
         }
     };
 
@@ -65,13 +94,18 @@ const Products = () => {
             if (formData.amount) data.append('amount', formData.amount);
             if (formData.image) data.append('image', formData.image);
 
+            // New fields
+            if (formData.warehouseId) data.append('warehouseId', formData.warehouseId);
+            if (formData.initialStock) data.append('initialStock', formData.initialStock);
+
+
             await axios.post('http://localhost:5000/api/products', data, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            setFormData({ name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null });
+            setFormData({ name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null, warehouseId: '', initialStock: '' });
             setImagePreview(null);
             setShowModal(false);
             fetchProducts();
@@ -96,11 +130,15 @@ const Products = () => {
     }
 
     if (loading) return <div>Loading...</div>;
+    if (error) return <div className="text-red-500 p-4 font-bold text-center border border-red-200 bg-red-50 rounded mt-4">{error}</div>;
 
     return (
-        <div>
+        <div className="container mx-auto px-4 py-8">
+            {/* DEBUG INFO BOX */}
+
+
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Products</h1>
+                <h1 className="text-3xl font-bold text-gray-800">Products</h1>
                 <div className="flex gap-4">
                     <div className="relative">
                         <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
@@ -167,6 +205,11 @@ const Products = () => {
                 </table>
             </div>
 
+            {products.length === 0 && !loading && (
+                <div className="text-center py-10">
+                    <p className="text-gray-500 text-lg">No products found.</p>
+                </div>
+            )}
             <div className="mt-4 flex justify-between items-center">
                 <button
                     disabled={page === 1}
@@ -230,6 +273,38 @@ const Products = () => {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700">Min Stock Level</label>
                                 <input type="number" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2" value={formData.minStockLevel} onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })} />
+                            </div>
+
+                            {/* Initial Inventory Section */}
+                            <div className="col-span-2 border-t pt-4 mt-2">
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Initial Inventory</h3>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Warehouse</label>
+                                        <select
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"
+                                            value={formData.warehouseId}
+                                            onChange={(e) => setFormData({ ...formData, warehouseId: e.target.value })}
+                                            disabled={user?.role === 'WAREHOUSE_ADMIN'}
+                                        >
+                                            <option value="">Select Warehouse</option>
+                                            {warehouses.map(w => (
+                                                <option key={w.id} value={w.id}>{w.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"
+                                            value={formData.initialStock}
+                                            onChange={(e) => setFormData({ ...formData, initialStock: e.target.value })}
+                                            placeholder="Quantity"
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="col-span-2 flex justify-end gap-2 mt-4">
