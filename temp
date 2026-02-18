@@ -1,0 +1,444 @@
+'' prompt-2''
+
+Role-Based Functional Flow – Inventory Management System
+1. Super Admin
+
+Only the Super Admin can create a new warehouse.
+
+The Super Admin can add additional fields to the warehouse table, such as capacity.
+
+The Super Admin can select warehouses when initiating stock transfers between warehouses.
+
+The system continuously monitors stock levels in each warehouse.
+
+If stock falls below the minimum limit, the system triggers a low-stock alert.
+
+The Super Admin can view all low-stock alerts.
+
+After reviewing the alert, the Super Admin can create a Purchase Order (PO) by:
+
+Selecting a supplier
+
+Selecting products
+
+Entering quantity
+
+Setting a delivery date
+
+The system sends the purchase order to the selected supplier.
+
+2. Warehouse Admin
+
+The Warehouse Admin can:
+
+View and monitor stock levels in their assigned warehouse.
+
+Approve internal stock transfers.
+
+3. Inventory Manager
+
+The Inventory Manager can:
+
+Add stock to a warehouse.
+
+Deduct stock from a warehouse.
+
+Manage product quantities.
+
+Maintain and update inventory records.
+
+4. Supplier
+
+The Supplier can:
+
+View purchase orders assigned to them.
+
+Confirm or reject purchase orders.
+
+Deliver stock to the warehouse.
+
+After delivery:
+
+The warehouse receives the stock.
+
+The inventory is updated.
+
+The purchase order is marked as Completed.
+
+5. Customer
+
+Customers can only view and access information related to their own accounts and orders.
+
+
+'' prompt-1''
+
+📌 Project Overview
+
+Build a full-scale, production-ready Inventory Management System using:
+
+Frontend: React (Vite or Next.js)
+
+Backend: Node.js + Express
+
+Database: PostgreSQL
+
+ORM: Prisma
+
+Authentication: JWT + Refresh Tokens
+
+The system must be scalable to support:
+
+85,000+ products
+
+300–500 daily customer orders
+
+Multiple warehouses
+
+Multiple user roles
+
+Supplier portal
+
+Financial adjustments
+
+The architecture must follow modular design, clean code principles, role-based access control, and scalable database optimization.
+
+🔐 1. Authentication & Role Management
+
+Implement secure JWT authentication with:
+
+Roles:
+
+Super Admin
+
+Warehouse Admin
+
+Inventory Manager
+
+Customer (Regular + GAS Customer)
+
+Supplier
+
+Features:
+
+Secure login & registration
+
+Role-based route protection
+
+Enable/disable user accounts
+
+Password hashing using bcrypt
+
+Refresh token support
+
+Audit logging
+
+📦 2. Core Inventory & Product Management
+Warehouse Management
+
+Add/Edit/Delete warehouses
+
+Track stock warehouse-wise
+
+Product Catalog
+
+Support 85,000+ products
+
+Bulk CSV import
+
+SKU & barcode unique constraint
+
+Search, filter, pagination
+
+Minimum stock alert system
+
+Inventory Tracking
+
+Item-level tracking
+
+Box-level tracking
+
+Auto calculate total units
+
+Low stock notifications
+
+🔄 3. Stock Movement & Transactions
+Internal Stock Transfer
+
+Transfer stock between warehouses
+
+Deduct from source
+
+Add to destination
+
+Maintain transfer logs
+
+Financial Adjustments
+
+Credit Notes (returns)
+
+Debit Notes (pricing correction)
+
+Inventory adjustment after return
+
+Maintain audit trail
+
+🛒 4. Customer Order Management
+Customer Portal
+
+Secure login
+
+Add to cart
+
+Place orders (10–20+ items)
+
+Handle 300–500 orders daily
+
+Pantry List
+
+Save frequent products
+
+Quick reorder
+
+Order History
+
+View previous orders
+
+One-click reorder
+
+Order Flow
+
+Validate stock
+
+Deduct inventory
+
+Generate invoice
+
+Update order status
+
+Maintain order logs
+
+🏭 5. Supplier Portal
+
+Supplier login
+
+View purchase orders
+
+Confirm supply
+
+Upload invoices
+
+Track payment status
+
+Supplier performance report
+
+📊 6. Reporting & Dashboard
+
+Total products
+
+Low stock alerts
+
+Daily order count
+
+Revenue summary
+
+Warehouse stock report
+
+Fast/Slow moving products
+
+Customer purchase report
+
+Supplier performance report
+
+🗄 7. DATABASE DESIGN (Production-Ready)
+
+Use PostgreSQL with proper indexing and foreign key constraints.
+
+🔹 USERS TABLE
+Field	Type
+id	UUID (PK)
+name	String
+email	String (Unique)
+password	String
+role	Enum
+status	Boolean (active/disabled)
+createdAt	Timestamp
+updatedAt	Timestamp
+
+Index:
+
+email
+
+role
+
+🔹 WAREHOUSES TABLE
+Field	Type
+id	UUID (PK)
+name	String
+location	String
+createdAt	Timestamp
+
+🔹 PRODUCTS TABLE
+Field	Type
+id	UUID (PK)
+name	String
+sku	String (Unique)
+barcode	String (Unique)
+category	String
+unitType	Enum (ITEM/BOX)
+boxSize	Integer
+minStockLevel	Integer
+createdAt	Timestamp
+
+Indexes:
+
+sku
+
+barcode
+
+name
+
+category
+
+🔹 INVENTORY TABLE
+Field	Type
+id	UUID (PK)
+productId	FK → Products
+warehouseId	FK → Warehouses
+itemQuantity	Integer
+boxQuantity	Integer
+updatedAt	Timestamp
+
+Composite Index:
+
+productId + warehouseId
+
+🔹 STOCK_TRANSFERS TABLE
+Field	Type
+id	UUID
+productId	FK
+fromWarehouseId	FK
+toWarehouseId	FK
+quantity	Integer
+createdAt	Timestamp
+
+🔹 CUSTOMERS TABLE
+Field	Type
+id	UUID
+name	String
+type	Enum (REGULAR/GAS)
+creditLimit	Decimal
+createdAt	Timestamp
+
+🔹 ORDERS TABLE
+Field	Type
+id	UUID
+customerId	FK
+status	Enum
+totalAmount	Decimal
+createdAt	Timestamp
+
+Indexes:
+
+customerId
+
+status
+
+createdAt
+
+🔹 ORDER_ITEMS TABLE
+Field	Type
+id	UUID
+orderId	FK
+productId	FK
+quantity	Integer
+price	Decimal
+
+Composite Index:
+
+orderId + productId
+
+🔹 SUPPLIERS TABLE
+Field	Type
+id	UUID
+name	String
+contactInfo	String
+createdAt	Timestamp
+
+🔹 PURCHASE_ORDERS TABLE
+Field	Type
+id	UUID
+supplierId	FK
+status	Enum
+totalAmount	Decimal
+createdAt	Timestamp
+
+🔹 CREDIT_DEBIT_NOTES TABLE
+Field	Type
+id	UUID
+type	Enum (CREDIT/DEBIT)
+referenceId	UUID
+amount	Decimal
+reason	String
+createdAt	Timestamp
+
+⚙️ 8. Technical Requirements
+
+Backend:
+
+RESTful APIs
+
+Input validation (Joi/Zod)
+
+Global error handling
+
+Database transactions for inventory deduction
+
+Logging middleware
+
+Rate limiting
+
+Proper indexing
+
+Frontend:
+
+Role-based routing
+
+Clean dashboard UI
+
+Reusable components
+
+Pagination for large datasets
+
+Loading & error states
+
+Axios API integration
+
+🚀 9. Performance & Scalability
+
+DB indexing
+
+Server-side pagination
+
+Redis caching (optional)
+
+Avoid N+1 queries
+
+Optimized joins
+
+Load testing ready
+
+🔐 10. Security
+
+JWT authentication
+
+Password hashing
+
+Input validation
+
+SQL injection prevention
+
+Secure HTTP headers
+
+Role-based access control
+
+Audit logging

@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  WAREHOUSE_ADMIN
+  INVENTORY_MANAGER
+  CUSTOMER
+  SUPPLIER
+}
+
+enum UnitType {
+  ITEM
+  BOX
+}
+
+enum CustomerType {
+  REGULAR
+  GAS
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PurchaseOrderStatus {
+  PENDING
+  CONFIRMED
+  DELIVERED
+  RECEIVED
+  CANCELLED
+}
+
+enum AdjustmentType {
+  CREDIT
+  DEBIT
+}
+
+model User {
+  id          String     @id @default(uuid())
+  name        String
+  email       String     @unique
+  password    String
+  role        Role       @default(CUSTOMER)
+  status      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  warehouseId String?
+  warehouse   Warehouse? @relation("WarehouseAdmin", fields: [warehouseId], references: [id])
+
+  @@index([email])
+  @@index([role])
+}
+
+model Warehouse {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  capacity  Int      @default(1000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory          Inventory[]
+  stockTransfersFrom StockTransfer[]   @relation("FromWarehouse")
+  stockTransfersTo   StockTransfer[]   @relation("ToWarehouse")
+  creditDebitNotes   CreditDebitNote[]
+  purchaseOrders     PurchaseOrder[]
+  admins             User[]            @relation("WarehouseAdmin")
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  sku           String   @unique
+  barcode       String   @unique
+  category      String
+  unitType      UnitType
+  boxSize       Int?
+  minStockLevel Int      @default(0)
+  amount        Decimal  @default(0.0)
+  image         String?
+  createdAt     DateTime @default(now())
+
+  inventory          Inventory[]
+  stockTransfers     StockTransfer[]
+  orderItems         OrderItem[]
+  creditDebitNotes   CreditDebitNote[]
+  purchaseOrderItems PurchaseOrderItem[]
+
+  @@index([sku])
+  @@index([barcode])
+  @@index([name])
+  @@index([category])
+}
+
+model Inventory {
+  id           String   @id @default(uuid())
+  productId    String
+  warehouseId  String
+  itemQuantity Int      @default(0)
+  boxQuantity  Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id])
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+
+  @@unique([productId, warehouseId])
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+model StockTransfer {
+  id              String         @id @default(uuid())
+  productId       String
+  fromWarehouseId String
+  toWarehouseId   String
+  itemQuantity    Int
+  boxQuantity     Int
+  status          TransferStatus @default(PENDING)
+  createdAt       DateTime       @default(now())
+
+  product       Product   @relation(fields: [productId], references: [id])
+  fromWarehouse Warehouse @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])
+  toWarehouse   Warehouse @relation("ToWarehouse", fields: [toWarehouseId], references: [id])
+}
+
+model Customer {
+  id          String       @id @default(uuid())
+  name        String
+  type        CustomerType @default(REGULAR)
+  creditLimit Decimal      @default(0.0)
+  createdAt   DateTime     @default(now())
+
+  orders Order[]
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  customerId  String
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @default(0.0)
+  createdAt   DateTime    @default(now())
+
+  customer   Customer    @relation(fields: [customerId], references: [id])
+  orderItems OrderItem[]
+
+  @@index([customerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Decimal
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId, productId])
+}
+
+model Supplier {
+  id          String   @id @default(uuid())
+  name        String
+  contactInfo String
+  createdAt   DateTime @default(now())
+
+  purchaseOrders PurchaseOrder[]
+}
+
+model PurchaseOrder {
+  id           String              @id @default(uuid())
+  supplierId   String
+  warehouseId  String?
+  status       PurchaseOrderStatus @default(PENDING)
+  totalAmount  Decimal             @default(0.0)
+  deliveryDate DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  supplier  Supplier            @relation(fields: [supplierId], references: [id])
+  warehouse Warehouse?          @relation(fields: [warehouseId], references: [id])
+  items     PurchaseOrderItem[]
+}
+
+model PurchaseOrderItem {
+  id              String  @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitCost        Decimal
+
+  purchaseOrder PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  product       Product       @relation(fields: [productId], references: [id])
+}
+
+model CreditDebitNote {
+  id           String         @id @default(uuid())
+  type         AdjustmentType
+  referenceId  String? // Could point to Order ID or Return ID
+  amount       Decimal
+  reason       String
+  productId    String?
+  warehouseId  String?
+  itemQuantity Int?           @default(0)
+  boxQuantity  Int?           @default(0)
+  createdAt    DateTime       @default(now())
+
+  product   Product?   @relation(fields: [productId], references: [id])
+  warehouse Warehouse? @relation(fields: [warehouseId], references: [id])
+}
