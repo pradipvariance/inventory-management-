@@ -1,11 +1,13 @@
-import { useState, useEffect, useContext } from 'react';
-import { Bell, User, LogOut } from 'lucide-react';
-import AuthContext from '../context/AuthContext';
+import { useState, useEffect } from 'react';
+import { Bell, User, LogOut, ShoppingCart } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout } = useAuth();
+    const socket = useSocket();
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -15,20 +17,48 @@ const Header = () => {
         try {
             const token = localStorage.getItem('token');
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            const { data } = await axios.get('http://localhost:5000/api/transfers/pending-count', config);
-            setNotifications(data.transfers);
+
+            if (user?.role === 'WAREHOUSE_ADMIN') {
+                const { data } = await axios.get('http://localhost:5000/api/transfers/pending-count', config);
+                setNotifications(data.transfers.map(t => ({ ...t, type: 'TRANSFER' })));
+            } else if (user?.role === 'INVENTORY_MANAGER') {
+                const { data } = await axios.get('http://localhost:5000/api/orders/pending-count', config);
+                setNotifications(data.orders.map(o => ({ ...o, type: 'ORDER' })));
+            }
         } catch (error) {
             console.error('Error fetching notifications:', error);
         }
     };
 
     useEffect(() => {
-        if (user?.role === 'WAREHOUSE_ADMIN') {
+        if (socket && (user?.role === 'WAREHOUSE_ADMIN' || user?.role === 'INVENTORY_MANAGER')) {
             fetchNotifications();
-            const interval = setInterval(fetchNotifications, 60000); // Poll every minute
-            return () => clearInterval(interval);
+
+            // Listen for changes
+            socket.on('new_order', () => {
+                if (user?.role === 'INVENTORY_MANAGER') fetchNotifications();
+            });
+
+            socket.on('transfer_updated', () => {
+                if (user?.role === 'INVENTORY_MANAGER' || user?.role === 'WAREHOUSE_ADMIN') fetchNotifications();
+            });
+
+            socket.on('new_transfer', () => {
+                if (user?.role === 'WAREHOUSE_ADMIN') fetchNotifications();
+            });
+
+            // For Warehouse Admin (Stock Transfers) - Keep existing polling as backup
+            const interval = setInterval(fetchNotifications, 60000);
+
+            return () => {
+                socket.off('new_order');
+                socket.off('order_updated');
+                socket.off('new_transfer');
+                socket.off('transfer_updated');
+                clearInterval(interval);
+            };
         }
-    }, [user]);
+    }, [user, socket]);
 
     const handleApprove = async (id) => {
         try {
@@ -55,6 +85,18 @@ const Header = () => {
         }
     };
 
+    const handleProcessOrder = async (id) => {
+        try {
+            const token = localStorage.getItem('token');
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            await axios.put(`http://localhost:5000/api/orders/${id}/status`, { status: 'PROCESSING' }, config);
+            fetchNotifications();
+            setShowNotifications(false);
+        } catch (error) {
+            console.error('Error processing order:', error);
+        }
+    };
+
     return (
         <header className="bg-white shadow-sm h-20 flex items-center justify-between px-8 z-20 sticky top-0 border-b border-gray-100">
             {/* Left Side - Welcome Message */}
@@ -73,8 +115,8 @@ const Header = () => {
             {/* Right Side - Actions */}
             <div className="flex items-center gap-6">
 
-                {/* Notification Bell - Restricted to Warehouse Admin */}
-                {user?.role === 'WAREHOUSE_ADMIN' && (
+                {/* Notification Bell - Restricted to Warehouse Admin & Inventory Manager */}
+                {(user?.role === 'WAREHOUSE_ADMIN' || user?.role === 'INVENTORY_MANAGER') && (
                     <div className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
@@ -101,29 +143,52 @@ const Header = () => {
                                     ) : (
                                         notifications.map(notif => (
                                             <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <p className="text-sm font-medium text-gray-900">Transfer Request</p>
-                                                    <span className="text-xs text-gray-400">Just now</span>
-                                                </div>
-                                                <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                                                    <span className="font-semibold text-gray-700">{notif.fromWarehouse.name}</span> requests
-                                                    <span className="font-bold text-gray-800"> {notif.itemQuantity} </span>
-                                                    units of <span className="font-medium text-indigo-600">{notif.product.name}</span>.
-                                                </p>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={() => handleApprove(notif.id)}
-                                                        className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm cursor-pointer"
-                                                    >
-                                                        Approve
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleReject(notif.id)}
-                                                        className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                </div>
+                                                {notif.type === 'TRANSFER' ? (
+                                                    <>
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <p className="text-sm font-medium text-gray-900">Transfer Request</p>
+                                                            <span className="text-xs text-gray-400">Just now</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                                                            <span className="font-semibold text-gray-700">{notif.fromWarehouse.name}</span> requests
+                                                            <span className="font-bold text-gray-800"> {notif.itemQuantity} </span>
+                                                            units of <span className="font-medium text-indigo-600">{notif.product.name}</span>.
+                                                        </p>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleApprove(notif.id)}
+                                                                className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm cursor-pointer"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleReject(notif.id)}
+                                                                className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <p className="text-sm font-medium text-gray-900">New Order</p>
+                                                            <span className="text-xs text-gray-400">Just now</span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                                                            Customer <span className="font-semibold text-gray-700">{notif.customer?.name}</span> placed an order
+                                                            for <span className="font-bold text-gray-800"> ${notif.totalAmount}</span>.
+                                                        </p>
+                                                        <div className="flex gap-2">
+                                                            <button
+                                                                onClick={() => handleProcessOrder(notif.id)}
+                                                                className="flex-1 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm cursor-pointer"
+                                                            >
+                                                                Process Order
+                                                            </button>
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         ))
                                     )}

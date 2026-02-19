@@ -47,7 +47,20 @@ export const createTransfer = async (req, res) => {
                 status: 'PENDING',
                 createdById: req.user.id
             },
+            include: {
+                product: true,
+                fromWarehouse: true,
+                toWarehouse: true,
+                createdBy: {
+                    select: { name: true, role: true }
+                }
+            }
         });
+
+        // Notify Management
+        try {
+            getIO().to('management').emit('new_transfer', transfer);
+        } catch (err) { }
 
         res.status(201).json(transfer);
     } catch (error) {
@@ -130,11 +143,21 @@ export const approveTransfer = async (req, res) => {
 
             const updatedTransfer = await prisma.stockTransfer.update({
                 where: { id },
-                data: { status: 'COMPLETED' } // Or APPROVED? Let's go straight to completed for simplicity unless "In Transit" is needed.
+                data: { status: 'COMPLETED' },
+                include: {
+                    product: true,
+                    fromWarehouse: true,
+                    toWarehouse: true
+                }
             });
 
             return updatedTransfer;
         });
+
+        // Notify Management
+        try {
+            getIO().to('management').emit('transfer_updated', result);
+        } catch (err) { }
 
         res.json(result);
     } catch (error) {
@@ -147,8 +170,19 @@ export const rejectTransfer = async (req, res) => {
     try {
         const transfer = await prisma.stockTransfer.update({
             where: { id },
-            data: { status: 'REJECTED' }
+            data: { status: 'REJECTED' },
+            include: {
+                product: true,
+                fromWarehouse: true,
+                toWarehouse: true
+            }
         });
+
+        // Notify Management
+        try {
+            getIO().to('management').emit('transfer_updated', transfer);
+        } catch (err) { }
+
         res.json(transfer);
     } catch (error) {
         res.status(500).json({ message: error.message });

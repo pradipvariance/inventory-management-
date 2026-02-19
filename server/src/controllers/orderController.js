@@ -97,6 +97,11 @@ export const createOrder = async (req, res) => {
             return order;
         });
 
+        // Notify Management
+        try {
+            getIO().to('management').emit('new_order', result);
+        } catch (err) { }
+
         res.status(201).json(result);
 
     } catch (error) {
@@ -142,13 +147,85 @@ export const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
 
     try {
-        const order = await prisma.order.update({
-            where: { id },
-            data: { status },
-            include: { customer: true }
+        const result = await prisma.$transaction(async (prisma) => {
+            const originalOrder = await prisma.order.findUnique({
+                where: { id },
+                include: { orderItems: true, customer: true }
+            });
+
+            if (!originalOrder) throw new Error('Order not found');
+
+            // Handle Stock Restoration if being cancelled
+            if (status === 'CANCELLED' && originalOrder.status !== 'CANCELLED') {
+                for (const item of originalOrder.orderItems) {
+                    if (item.warehouseId) {
+                        await prisma.inventory.update({
+                            where: {
+                                productId_warehouseId: {
+                                    productId: item.productId,
+                                    warehouseId: item.warehouseId
+                                }
+                            },
+                            data: { itemQuantity: { increment: item.quantity } }
+                        });
+
+                        // Emit stock update
+                        try {
+                            getIO().to(`product:${item.productId}`).emit('stock_update', {
+                                productId: item.productId,
+                                warehouseId: item.warehouseId,
+                                change: item.quantity,
+                                type: 'increase'
+                            });
+                        } catch (err) { }
+                    }
+                }
+            }
+
+            const updatedOrder = await prisma.order.update({
+                where: { id },
+                data: { status },
+                include: { customer: true, orderItems: { include: { product: true } } }
+            });
+
+            return updatedOrder;
         });
-        res.json(order);
+
+        // Notify Management and Customer
+        try {
+            const io = getIO();
+            io.to('management').emit('order_updated', result);
+            io.to(`user:${result.customer.id}`).emit('order_status_changed', result);
+        } catch (err) { }
+
+        res.json(result);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const getManageableOrders = async (req, res) => {
+    try {
+        const where = {
+            status: { in: ['PENDING', 'PROCESSING', 'SHIPPED'] }
+        };
+
+        const count = await prisma.order.count({ where });
+        const orders = await prisma.order.findMany({
+            where,
+            include: {
+                customer: true,
+                orderItems: {
+                    include: { product: true }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json({ count, orders });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const getPendingOrdersCount = getManageableOrders;
