@@ -38,6 +38,7 @@ export const createPO = async (req, res) => {
 
         res.status(201).json(po);
     } catch (error) {
+        console.error("Create PO Error:", error);
         if (error instanceof z.ZodError) {
             return res.status(400).json({ message: error.errors });
         }
@@ -50,13 +51,7 @@ export const getPOs = async (req, res) => {
         let where = {};
         // If supplier, restrict to own POs
         if (req.user.role === 'SUPPLIER') {
-            // Assuming Supplier ID logic needs to be implemented.
-            // For now, simpler: Suppliers login? 
-            // The requirement says "Supplier can view purchase orders assigned to them".
-            // We need to link User to Supplier? Or just use "SUPPLIER" role users are generic?
-            // "Confirm or reject purchase orders". 
-            // Let's assume the User IS the Supplier contact or linked. 
-            // For MVP: Return all POs or filter by supplierId if passed in params.
+            where.supplierId = req.user.id;
         }
 
         const pos = await prisma.purchaseOrder.findMany({

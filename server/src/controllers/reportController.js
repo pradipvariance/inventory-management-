@@ -37,9 +37,9 @@ export const getDashboardStats = async (req, res) => {
         }
 
         const [orderCount, warehouseCount, supplierCount] = await Promise.all([
-            prisma.order.count(),   // Global orders 
+            prisma.order.count(),
             prisma.warehouse.count(),
-            prisma.supplier.count()
+            prisma.user.count({ where: { role: 'SUPPLIER' } })
         ]);
 
         // Calculate total revenue from Orders
@@ -82,6 +82,7 @@ export const getDashboardStats = async (req, res) => {
             inventoryCount
         });
     } catch (error) {
+        console.error("Dashboard Stats Error:", error);
         res.status(500).json({ message: error.message });
     }
 };

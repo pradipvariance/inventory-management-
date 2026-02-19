@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { DollarSign, ShoppingCart, Package, AlertTriangle, Layers } from 'lucide-react';
+import { DollarSign, ShoppingCart, Package, AlertTriangle, Layers, Plus } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 
 const Dashboard = () => {
@@ -17,7 +17,14 @@ const Dashboard = () => {
     const [lowStock, setLowStock] = useState([]);
     const [products, setProducts] = useState([]);
     const [inventory, setInventory] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Quick PO Modal State
+    const [showQuickPOModal, setShowQuickPOModal] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [poForm, setPoForm] = useState({ supplierId: '', quantity: 1, unitCost: 0, deliveryDate: '' });
+    const [creatingPO, setCreatingPO] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -27,14 +34,16 @@ const Dashboard = () => {
 
                 // Fetch basic stats - handle errors individually if needed or as a group
                 try {
-                    const [statsRes, salesRes, stockRes] = await Promise.all([
+                    const [statsRes, salesRes, stockRes, supplierRes] = await Promise.all([
                         axios.get('http://localhost:5000/api/reports/stats', config),
                         axios.get('http://localhost:5000/api/reports/sales', config),
-                        axios.get('http://localhost:5000/api/reports/low-stock', config)
+                        axios.get('http://localhost:5000/api/reports/low-stock', config),
+                        axios.get('http://localhost:5000/api/suppliers', config).catch(() => ({ data: [] }))
                     ]);
                     setStats(prev => ({ ...prev, ...statsRes.data }));
                     setSalesData(salesRes.data || []);
                     setLowStock(stockRes.data || []);
+                    setSuppliers(supplierRes.data || []);
                 } catch (err) {
                     console.error("Failed to load core stats", err);
                 }
@@ -62,6 +71,45 @@ const Dashboard = () => {
     }, [user]);
 
     if (loading) return <div>Loading Dashboard...</div>;
+
+    const handleOpenQuickPO = (item) => {
+        setSelectedItem(item);
+        setPoForm({
+            supplierId: '',
+            quantity: Math.max(1, (item.product?.minStockLevel || 0) - item.itemQuantity),
+            unitCost: item.product?.amount || 0,
+            deliveryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default 7 days
+        });
+        setShowQuickPOModal(true);
+    };
+
+    const handleCreatePO = async (e) => {
+        e.preventDefault();
+        setCreatingPO(true);
+        try {
+            const token = localStorage.getItem('token');
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+
+            await axios.post('http://localhost:5000/api/purchase-orders', {
+                supplierId: poForm.supplierId,
+                warehouseId: selectedItem.warehouseId,
+                deliveryDate: poForm.deliveryDate,
+                items: [{
+                    productId: selectedItem.productId,
+                    quantity: parseInt(poForm.quantity),
+                    unitCost: parseFloat(poForm.unitCost)
+                }]
+            }, config);
+
+            alert('Purchase Order created successfully!');
+            setShowQuickPOModal(false);
+        } catch (error) {
+            console.error('Error creating PO:', error);
+            alert(error.response?.data?.message || 'Error creating PO');
+        } finally {
+            setCreatingPO(false);
+        }
+    };
 
     // Fallback constants if stats are missing
     const safeStats = stats || { totalRevenue: 0, orderCount: 0, productCount: 0, lowStockCount: 0, inventoryCount: 0 };
@@ -140,7 +188,7 @@ const Dashboard = () => {
                 ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
                 {/* Sales Chart - Hidden for Warehouse Admin */}
                 {user.role !== 'WAREHOUSE_ADMIN' && (
                     <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
@@ -194,6 +242,7 @@ const Dashboard = () => {
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Warehouse</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-50">
@@ -212,6 +261,14 @@ const Dashboard = () => {
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
                                                 Qty: {item.itemQuantity}
                                             </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            <button
+                                                onClick={() => handleOpenQuickPO(item)}
+                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                                            >
+                                                Order
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
@@ -312,6 +369,106 @@ const Dashboard = () => {
                     </div>
                 )}
             </div>
+
+            {/* Quick PO Modal */}
+            {showQuickPOModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md animate-scale-in">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 className="text-2xl font-bold text-gray-800">Create Purchase Order</h2>
+                            <button onClick={() => setShowQuickPOModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <Plus size={24} className="rotate-45" />
+                            </button>
+                        </div>
+
+                        <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <p className="text-sm text-gray-500 mb-1">Product</p>
+                            <p className="font-semibold text-gray-900">{selectedItem?.product?.name}</p>
+                            <div className="flex justify-between mt-2">
+                                <div>
+                                    <p className="text-xs text-gray-500 uppercase">Warehouse</p>
+                                    <p className="text-sm font-medium">{selectedItem?.warehouse?.name}</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xs text-gray-500 uppercase">Current Stock</p>
+                                    <p className="text-sm font-medium text-red-600">{selectedItem?.itemQuantity} units</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleCreatePO} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Supplier</label>
+                                <select
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all outline-none"
+                                    value={poForm.supplierId}
+                                    onChange={e => setPoForm({ ...poForm, supplierId: e.target.value })}
+                                >
+                                    <option value="">Select Supplier</option>
+                                    {suppliers.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Quantity</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        value={poForm.quantity}
+                                        onChange={e => setPoForm({ ...poForm, quantity: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-1">Unit Cost ($)</label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        value={poForm.unitCost}
+                                        onChange={e => setPoForm({ ...poForm, unitCost: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Estimated Delivery</label>
+                                <input
+                                    type="date"
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                    value={poForm.deliveryDate}
+                                    onChange={e => setPoForm({ ...poForm, deliveryDate: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowQuickPOModal(false)}
+                                    className="flex-1 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={creatingPO}
+                                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 transition-colors shadow-lg shadow-indigo-200 font-bold"
+                                >
+                                    {creatingPO ? 'Creating...' : 'Create PO'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

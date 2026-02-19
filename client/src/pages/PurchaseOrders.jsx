@@ -32,10 +32,10 @@ const PurchaseOrders = () => {
                 axios.get('http://localhost:5000/api/products', config).catch(() => ({ data: { products: [] } }))
             ]);
 
-            setPOs(poRes.data);
-            setSuppliers(sRes.data);
-            setWarehouses(wRes.data);
-            setProducts(pRes.data.products || []);
+            setPOs(Array.isArray(poRes.data) ? poRes.data : []);
+            setSuppliers(Array.isArray(sRes.data) ? sRes.data : []);
+            setWarehouses(Array.isArray(wRes.data) ? wRes.data : []);
+            setProducts(pRes.data?.products || []);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -125,7 +125,7 @@ const PurchaseOrders = () => {
                                 <h3 className="text-lg font-semibold flex items-center gap-2">
                                     <FileText size={18} /> PO #{po.id.slice(0, 8)}
                                 </h3>
-                                <p className="text-gray-600">Supplier: {po.supplier.name}</p>
+                                <p className="text-gray-600">Supplier: {po.supplier?.name || 'Unknown'}</p>
                                 <p className="text-gray-600">Warehouse: {po.warehouse?.name || 'N/A'}</p>
                                 <p className="text-gray-500 text-sm">Created: {new Date(po.createdAt).toLocaleDateString()}</p>
                                 {po.deliveryDate && <p className="text-gray-500 text-sm">Delivery Due: {new Date(po.deliveryDate).toLocaleDateString()}</p>}
@@ -133,10 +133,10 @@ const PurchaseOrders = () => {
                             <div className="text-right">
                                 <div className="text-xl font-bold text-indigo-600">${po.totalAmount}</div>
                                 <span className={`inline-block px-2 py-1 text-xs font-semibold rounded-full mt-2 ${po.status === 'RECEIVED' ? 'bg-green-100 text-green-800' :
-                                        po.status === 'DELIVERED' ? 'bg-blue-100 text-blue-800' :
-                                            po.status === 'CONFIRMED' ? 'bg-purple-100 text-purple-800' :
-                                                po.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
-                                                    'bg-yellow-100 text-yellow-800'
+                                    po.status === 'DELIVERED' ? 'bg-blue-100 text-blue-800' :
+                                        po.status === 'CONFIRMED' ? 'bg-purple-100 text-purple-800' :
+                                            po.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                                'bg-yellow-100 text-yellow-800'
                                     }`}>
                                     {po.status}
                                 </span>
@@ -148,7 +148,7 @@ const PurchaseOrders = () => {
                             <ul className="space-y-1 text-sm text-gray-600">
                                 {po.items.map(item => (
                                     <li key={item.id} className="flex justify-between">
-                                        <span>{item.product.name} (x{item.quantity})</span>
+                                        <span>{item.product?.name || 'Deleted Product'} (x{item.quantity})</span>
                                         <span>${item.unitCost} / unit</span>
                                     </li>
                                 ))}

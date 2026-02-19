@@ -35,10 +35,16 @@ function App() {
               </Route>
             </Route>
 
-            {/* Super Admin & Inventory Manager Routes (Excluding Products which is now shared) - UPDATED: Inventory Manager removed */}
+            {/* Super Admin Routes */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
                 <Route path="/adjustments" element={<Adjustments />} />
+              </Route>
+            </Route>
+
+            {/* Hidden/Restricted Routes */}
+            <Route element={<ProtectedRoute allowedRoles={[]} />}>
+              <Route element={<Layout />}>
                 <Route path="/suppliers" element={<Suppliers />} />
               </Route>
             </Route>
@@ -59,8 +65,8 @@ function App() {
               </Route>
             </Route>
 
-            {/* Supplier Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPPLIER', 'SUPER_ADMIN']} />}>
+            {/* Supplier Routes & Management */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPPLIER', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER']} />}>
               <Route element={<Layout />}>
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
               </Route>

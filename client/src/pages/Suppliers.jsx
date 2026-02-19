@@ -30,10 +30,13 @@ const Suppliers = () => {
         e.preventDefault();
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/suppliers', formData, {
+            await axios.post('http://localhost:5000/api/suppliers', {
+                name: formData.name,
+                email: formData.email
+            }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            setFormData({ name: '', contactInfo: '' });
+            setFormData({ name: '', email: '' });
             setShowModal(false);
             fetchSuppliers();
         } catch (error) {
@@ -69,8 +72,8 @@ const Suppliers = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2 text-gray-600">
-                            <Phone size={18} />
-                            <span>{supplier.contactInfo}</span>
+                            <Plus size={18} className="rotate-45" />
+                            <span>{supplier.email}</span>
                         </div>
                     </div>
                 ))}
@@ -92,12 +95,13 @@ const Suppliers = () => {
                                 />
                             </div>
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700">Contact Info</label>
-                                <textarea
+                                <label className="block text-sm font-medium text-gray-700">Email (User Login)</label>
+                                <input
+                                    type="email"
                                     required
                                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"
-                                    value={formData.contactInfo}
-                                    onChange={(e) => setFormData({ ...formData, contactInfo: e.target.value })}
+                                    value={formData.email || ''}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
                             </div>
                             <div className="flex justify-end gap-2">

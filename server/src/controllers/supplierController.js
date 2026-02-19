@@ -1,16 +1,34 @@
 import prisma from '../prisma.js';
 import { z } from 'zod';
 
+import bcrypt from 'bcrypt';
+
 const supplierSchema = z.object({
     name: z.string().min(2),
-    contactInfo: z.string().min(5),
+    email: z.string().email(),
 });
 
 export const createSupplier = async (req, res) => {
     try {
-        const { name, contactInfo } = supplierSchema.parse(req.body);
-        const supplier = await prisma.supplier.create({
-            data: { name, contactInfo },
+        const { name, email } = supplierSchema.parse(req.body);
+
+        // Check if user already exists
+        const existingUser = await prisma.user.findUnique({ where: { email } });
+        if (existingUser) {
+            return res.status(400).json({ message: 'User with this email already exists' });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('password123', salt); // Default password for new suppliers
+
+        const supplier = await prisma.user.create({
+            data: {
+                name,
+                email,
+                password: hashedPassword,
+                role: 'SUPPLIER',
+                status: true
+            },
         });
         res.status(201).json(supplier);
     } catch (error) {
@@ -23,7 +41,8 @@ export const createSupplier = async (req, res) => {
 
 export const getSuppliers = async (req, res) => {
     try {
-        const suppliers = await prisma.supplier.findMany({
+        const suppliers = await prisma.user.findMany({
+            where: { role: 'SUPPLIER' },
             orderBy: { createdAt: 'desc' },
         });
         res.json(suppliers);
