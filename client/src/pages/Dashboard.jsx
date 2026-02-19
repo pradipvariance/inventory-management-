@@ -4,6 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { DollarSign, ShoppingCart, Package, AlertTriangle, Layers, Plus, ArrowLeftRight, CheckCircle, Truck, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+// import { DollarSign, ShoppingCart, Package, AlertTriangle, Layers, Plus, ArrowLeftRight, CheckCircle } from 'lucide-react';
+// import AuthContext from '../context/AuthContext';
+import Loader from '../components/Loader';
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -126,7 +129,7 @@ const Dashboard = () => {
         }
     }, [user, socket]);
 
-    if (loading) return <div>Loading Dashboard...</div>;
+    if (loading) return <Loader text="Loading Dashboard..." />;
 
     const handleOpenQuickPO = (item) => {
         setSelectedItem(item);
@@ -353,7 +356,7 @@ const Dashboard = () => {
                     <div className="grid grid-cols-1 gap-8">
                         {/* Sales Chart - Hidden for Warehouse Admin */}
                         {user.role !== 'WAREHOUSE_ADMIN' && (
-                            <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100">
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                                 <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                                     <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                                     Sales Statistics
@@ -387,19 +390,19 @@ const Dashboard = () => {
                         )}
 
                         {/* Low Stock Alert */}
-                        <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             <div className="p-6 border-b border-gray-50 flex justify-between items-center">
                                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                     <span className="w-1.5 h-6 bg-red-500 rounded-full"></span>
                                     Low Stock Alerts
                                 </h2>
-                                <span className="bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                                <span className="bg-red-50 text-red-600 text-xs font-semibold px-2.5 py-0.5 rounded-full ring-1 ring-red-100">
                                     {lowStock.length} Items
                                 </span>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-50">
-                                    <thead className="bg-gray-50">
+                                    <thead className="bg-gray-50/50">
                                         <tr>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Warehouse</th>
@@ -411,7 +414,7 @@ const Dashboard = () => {
                                     </thead>
                                     <tbody className="bg-white divide-y divide-gray-50">
                                         {lowStock.map(item => (
-                                            <tr key={item.id} className="hover:bg-gray-50 transition-colors">
+                                            <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="h-8 w-8 rounded bg-gray-100 flex items-center justify-center text-gray-400 mr-3">
@@ -422,7 +425,7 @@ const Dashboard = () => {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.warehouse?.name || 'Unknown'}</td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ring-1 ring-red-200">
                                                         Qty: {item.itemQuantity}
                                                     </span>
                                                 </td>
@@ -430,7 +433,7 @@ const Dashboard = () => {
                                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                         <button
                                                             onClick={() => handleOpenQuickPO(item)}
-                                                            className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors cursor-pointer"
+                                                            className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors cursor-pointer text-xs font-bold"
                                                         >
                                                             Order
                                                         </button>
@@ -440,12 +443,13 @@ const Dashboard = () => {
                                         ))}
                                         {lowStock.length === 0 && (
                                             <tr>
-                                                <td colSpan={user.role === 'SUPER_ADMIN' ? "4" : "3"} className="px-6 py-8 text-center text-gray-500">
+                                                <td colSpan={user.role === 'SUPER_ADMIN' ? "4" : "3"} className="px-6 py-12 text-center text-gray-500">
                                                     <div className="flex flex-col items-center">
                                                         <div className="h-12 w-12 bg-green-50 rounded-full flex items-center justify-center mb-3">
-                                                            <Layers size={24} className="text-green-500" />
+                                                            <CheckCircle size={24} className="text-green-500" />
                                                         </div>
-                                                        <p>All stock levels are healthy.</p>
+                                                        <p className="font-medium text-gray-900">All stock levels are healthy.</p>
+                                                        <p className="text-sm mt-1">No items require immediate attention.</p>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -458,7 +462,7 @@ const Dashboard = () => {
                         {/* Recent Products & Inventory Sections - Warehouse Admin Only */}
                         {user.role === 'WAREHOUSE_ADMIN' && (
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                                     <div className="p-6 border-b border-gray-50">
                                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                             <span className="w-1.5 h-6 bg-violet-500 rounded-full"></span>
@@ -467,17 +471,17 @@ const Dashboard = () => {
                                     </div>
                                     <ul className="divide-y divide-gray-50">
                                         {products.map((product) => (
-                                            <li key={product.id} className="p-6 hover:bg-gray-50 transition-colors flex justify-between items-center">
+                                            <li key={product.id} className="p-6 hover:bg-gray-50 transition-colors flex justify-between items-center group">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="h-10 w-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600">
+                                                    <div className="h-10 w-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors">
                                                         <Package size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                                                        <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                                                        <p className="text-sm font-bold text-gray-900">{product.name}</p>
+                                                        <p className="text-xs text-gray-500 font-mono">SKU: {product.sku}</p>
                                                     </div>
                                                 </div>
-                                                <span className="text-sm text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full uppercase tracking-wide">
                                                     {product.category}
                                                 </span>
                                             </li>
@@ -490,7 +494,7 @@ const Dashboard = () => {
                                     </ul>
                                 </div>
 
-                                <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+                                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                                     <div className="p-6 border-b border-gray-50">
                                         <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                                             <span className="w-1.5 h-6 bg-amber-500 rounded-full"></span>
@@ -498,7 +502,7 @@ const Dashboard = () => {
                                         </h2>
                                     </div>
                                     <table className="min-w-full divide-y divide-gray-50">
-                                        <thead className="bg-gray-50">
+                                        <thead className="bg-gray-50/50">
                                             <tr>
                                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Quantity</th>
@@ -512,7 +516,7 @@ const Dashboard = () => {
                                                             <div className="h-8 w-8 rounded bg-amber-50 flex items-center justify-center text-amber-600 mr-3">
                                                                 <Layers size={16} />
                                                             </div>
-                                                            <span className="text-sm font-medium text-gray-900">{item.product?.name}</span>
+                                                            <span className="text-sm font-bold text-gray-900">{item.product?.name}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -649,29 +653,32 @@ const Dashboard = () => {
             {/* Tab: Transfer Requests */}
             {user?.role === 'WAREHOUSE_ADMIN' && activeTab === 'transfers' && (
                 <div className="animate-fade-in space-y-6">
-                    <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-                        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-indigo-50/10">
+                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="p-6 border-b border-gray-50 flex justify-between items-center bg-indigo-50/30">
                             <div>
                                 <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                                    <ArrowLeftRight size={24} className="text-indigo-500" />
+                                    <ArrowLeftRight size={24} className="text-indigo-600" />
                                     Incoming Transfer Requests
                                 </h2>
                                 <p className="text-sm text-gray-500 mt-1">Review and action stock transfers initiated by Super Admins</p>
                             </div>
-                            <span className="bg-indigo-100 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full">
+                            <span className="bg-indigo-100 text-indigo-600 text-xs font-bold px-3 py-1 rounded-full ring-1 ring-indigo-200">
                                 {pendingTransfers.length} PENDING
                             </span>
                         </div>
 
                         {pendingTransfers.length === 0 ? (
                             <div className="p-20 text-center text-gray-400">
-                                <ArrowLeftRight size={48} className="mx-auto mb-4 opacity-20" />
-                                <p className="text-lg font-medium">No pending transfer requests</p>
+                                <div className="h-20 w-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <ArrowLeftRight size={32} className="text-gray-300" />
+                                </div>
+                                <p className="text-lg font-bold text-gray-600">No pending transfer requests</p>
+                                <p className="text-sm text-gray-400 mt-1">Check back later for new requests.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="min-w-full divide-y divide-gray-50">
-                                    <thead className="bg-gray-50">
+                                    <thead className="bg-gray-50/50">
                                         <tr>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                                             <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Source</th>
@@ -719,8 +726,8 @@ const Dashboard = () => {
 
             {/* Quick PO Modal */}
             {showQuickPOModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md animate-scale-in">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md animate-scale-in border border-gray-100">
                         <div className="flex justify-between items-center mb-6">
                             <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Create Purchase Order</h2>
                             <button onClick={() => setShowQuickPOModal(false)} className="bg-gray-100 p-2 rounded-full text-gray-400 hover:text-gray-600 transition-all hover:rotate-90 cursor-pointer">
@@ -748,7 +755,7 @@ const Dashboard = () => {
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Supplier</label>
                                 <select
                                     required
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none font-medium text-gray-800 shadow-inner"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 transition-all outline-none font-medium text-gray-800 shadow-inner focus:border-transparent"
                                     value={poForm.supplierId}
                                     onChange={e => setPoForm({ ...poForm, supplierId: e.target.value })}
                                 >
@@ -766,7 +773,7 @@ const Dashboard = () => {
                                         type="number"
                                         min="1"
                                         required
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner focus:border-transparent"
                                         value={poForm.quantity}
                                         onChange={e => setPoForm({ ...poForm, quantity: e.target.value })}
                                     />
@@ -778,7 +785,7 @@ const Dashboard = () => {
                                         min="0"
                                         step="0.01"
                                         required
-                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner"
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner focus:border-transparent"
                                         value={poForm.unitCost}
                                         onChange={e => setPoForm({ ...poForm, unitCost: e.target.value })}
                                     />
@@ -790,9 +797,10 @@ const Dashboard = () => {
                                 <input
                                     type="date"
                                     required
-                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner"
+                                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium shadow-inner focus:border-transparent"
                                     value={poForm.deliveryDate}
                                     onChange={e => setPoForm({ ...poForm, deliveryDate: e.target.value })}
+                                    min={new Date().toISOString().split('T')[0]}
                                 />
                             </div>
 
@@ -800,14 +808,14 @@ const Dashboard = () => {
                                 <button
                                     type="button"
                                     onClick={() => setShowQuickPOModal(false)}
-                                    className="flex-1 px-4 py-3 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-100 transition-all font-bold text-sm active:scale-95 cursor-pointer"
+                                    className="flex-1 px-4 py-3 bg-gray-50 text-gray-500 rounded-xl hover:bg-gray-100 transition-all font-bold text-sm active:scale-95 cursor-pointer border border-transparent hover:border-gray-200"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={creatingPO}
-                                    className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-indigo-400 transition-all shadow-xl shadow-indigo-100 font-bold text-sm active:scale-95 cursor-pointer flex items-center justify-center"
+                                    className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:bg-indigo-400 transition-all shadow-xl shadow-indigo-100 font-bold text-sm active:scale-95 cursor-pointer flex items-center justify-center border border-transparent"
                                 >
                                     {creatingPO ? (
                                         <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>

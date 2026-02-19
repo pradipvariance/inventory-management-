@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Plus, Phone, User } from 'lucide-react';
+import Loader from '../components/Loader';
 
 const Suppliers = () => {
     const [suppliers, setSuppliers] = useState([]);
@@ -45,7 +46,7 @@ const Suppliers = () => {
         }
     };
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <Loader text="Loading Suppliers..." />;
 
     return (
         <div>

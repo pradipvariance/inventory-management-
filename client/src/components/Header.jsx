@@ -39,6 +39,10 @@ const Header = () => {
                 if (user?.role === 'INVENTORY_MANAGER') fetchNotifications();
             });
 
+            socket.on('order_updated', () => {
+                if (user?.role === 'INVENTORY_MANAGER') fetchNotifications();
+            });
+
             socket.on('transfer_updated', () => {
                 if (user?.role === 'INVENTORY_MANAGER' || user?.role === 'WAREHOUSE_ADMIN') fetchNotifications();
             });
@@ -98,17 +102,17 @@ const Header = () => {
     };
 
     return (
-        <header className="bg-white shadow-sm h-20 flex items-center justify-between px-8 z-20 sticky top-0 border-b border-gray-100">
+        <header className="bg-white h-16 flex items-center justify-between px-8 z-20 sticky top-0 border-b border-gray-200 shadow-sm">
             {/* Left Side - Welcome Message */}
-            {/* Left Side - Warehouse Context */}
             <div className="flex flex-col">
                 {user?.warehouse?.name ? (
-                    <>
-                        <span className="text-xs font-semibold text-indigo-500 uppercase tracking-wider">Current Warehouse</span>
-                        <h2 className="text-xl font-bold text-gray-800 tracking-tight">{user.warehouse.name}</h2>
-                    </>
+                    <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Warehouse:</span>
+                        <h2 className="text-base font-bold text-gray-800 tracking-tight">{user.warehouse.name}</h2>
+                    </div>
                 ) : (
-                    <h2 className="text-xl font-bold text-gray-800 tracking-tight">Inventory Management System</h2>
+                    <h2 className="text-lg font-bold text-gray-800 tracking-tight">Overview</h2>
                 )}
             </div>
 
@@ -120,75 +124,77 @@ const Header = () => {
                     <div className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className="p-2.5 rounded-full hover:bg-gray-100 transition-all duration-200 relative group"
+                            className="p-2 rounded-full hover:bg-gray-100 transition-all duration-200 relative group text-gray-400 hover:text-indigo-600"
                         >
-                            <Bell size={22} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
+                            <Bell size={20} className="transition-colors" />
                             {notifications.length > 0 && (
-                                <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                                <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
                             )}
                         </button>
 
                         {showNotifications && (
-                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fade-in">
-                                <div className="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between items-center">
-                                    <span className="font-semibold text-gray-800">Notifications</span>
-                                    {notifications.length > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-medium">{notifications.length} New</span>}
+                            <div className="absolute right-0 mt-3 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fade-in origin-top-right">
+                                <div className="p-4 border-b border-gray-50 bg-gray-50/80 backdrop-blur-sm flex justify-between items-center">
+                                    <span className="font-semibold text-gray-800 text-sm">Notifications</span>
+                                    {notifications.length > 0 && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{notifications.length}</span>}
                                 </div>
-                                <div className="max-h-80 overflow-y-auto">
+                                <div className="max-h-[20rem] overflow-y-auto custom-scrollbar">
                                     {notifications.length === 0 ? (
                                         <div className="p-8 text-center text-gray-400 text-sm flex flex-col items-center">
-                                            <Bell size={32} className="mb-2 opacity-20" />
-                                            No new notifications
+                                            <Bell size={24} className="mb-2 opacity-20" />
+                                            <p>No new notifications</p>
                                         </div>
                                     ) : (
                                         notifications.map(notif => (
-                                            <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                {notif.type === 'TRANSFER' ? (
-                                                    <>
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <p className="text-sm font-medium text-gray-900">Transfer Request</p>
-                                                            <span className="text-xs text-gray-400">Just now</span>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                                                            <span className="font-semibold text-gray-700">{notif.fromWarehouse.name}</span> requests
-                                                            <span className="font-bold text-gray-800"> {notif.itemQuantity} </span>
-                                                            units of <span className="font-medium text-indigo-600">{notif.product.name}</span>.
+                                            <div key={notif.id} className="p-4 border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`h-2 w-2 rounded-full ${notif.type === 'ORDER' ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
+                                                        <p className="text-sm font-semibold text-gray-900">
+                                                            {notif.type === 'ORDER' ? 'Customer Order' : 'Stock Transfer'}
                                                         </p>
-                                                        <div className="flex gap-2">
+                                                    </div>
+                                                    <span className="text-[10px] text-gray-400 font-medium bg-gray-100 px-1.5 py-0.5 rounded">NEW</span>
+                                                </div>
+                                                <p className="text-xs text-gray-600 mb-3 leading-relaxed">
+                                                    {notif.type === 'ORDER' ? (
+                                                        <>
+                                                            <span className="font-semibold text-gray-800">{notif.customer?.name}</span> placed an order for
+                                                            <span className="font-bold text-amber-600"> {notif.orderItems?.length || 0} </span> products.
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span className="font-semibold text-gray-800">{notif.fromWarehouse?.name}</span> requesting
+                                                            <span className="font-bold text-indigo-600"> {notif.itemQuantity} </span>
+                                                            units of {notif.product?.name}.
+                                                        </>
+                                                    )}
+                                                </p>
+                                                <div className="flex gap-2">
+                                                    {notif.type === 'ORDER' ? (
+                                                        <button
+                                                            onClick={() => handleProcessOrder(notif.id)}
+                                                            className="flex-1 px-3 py-1.5 bg-amber-500 text-white text-xs font-medium rounded-md hover:bg-amber-600 transition-colors shadow-sm"
+                                                        >
+                                                            Process Order
+                                                        </button>
+                                                    ) : (
+                                                        <>
                                                             <button
                                                                 onClick={() => handleApprove(notif.id)}
-                                                                className="flex-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-semibold rounded-lg hover:bg-emerald-600 transition-colors shadow-sm cursor-pointer"
+                                                                className="flex-1 px-3 py-1.5 bg-gray-900 text-white text-xs font-medium rounded-md hover:bg-gray-800 transition-colors shadow-sm"
                                                             >
                                                                 Approve
                                                             </button>
                                                             <button
                                                                 onClick={() => handleReject(notif.id)}
-                                                                className="flex-1 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors cursor-pointer"
+                                                                className="flex-1 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 text-xs font-medium rounded-md hover:bg-gray-50 transition-colors"
                                                             >
                                                                 Reject
                                                             </button>
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <p className="text-sm font-medium text-gray-900">New Order</p>
-                                                            <span className="text-xs text-gray-400">Just now</span>
-                                                        </div>
-                                                        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
-                                                            Customer <span className="font-semibold text-gray-700">{notif.customer?.name}</span> placed an order
-                                                            for <span className="font-bold text-gray-800"> ${notif.totalAmount}</span>.
-                                                        </p>
-                                                        <div className="flex gap-2">
-                                                            <button
-                                                                onClick={() => handleProcessOrder(notif.id)}
-                                                                className="flex-1 px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm cursor-pointer"
-                                                            >
-                                                                Process Order
-                                                            </button>
-                                                        </div>
-                                                    </>
-                                                )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))
                                     )}
@@ -199,37 +205,31 @@ const Header = () => {
                 )}
 
                 {/* Vertical Divider */}
-                <div className="h-8 w-px bg-gray-200"></div>
+                <div className="h-6 w-px bg-gray-200"></div>
 
                 {/* User Profile */}
                 <div className="relative">
                     <button
                         onClick={() => setShowProfileMenu(!showProfileMenu)}
-                        className="flex items-center gap-3 hover:bg-gray-50 py-1.5 px-2 rounded-xl transition-all duration-200"
+                        className="flex items-center gap-3 hover:bg-gray-50 py-1 pl-1 pr-3 rounded-full transition-all duration-200 border border-transparent hover:border-gray-200"
                     >
-                        <div className="flex flex-col items-end hidden sm:flex">
-                            <span className="text-sm font-bold text-gray-800 leading-none">{user?.name}</span>
-                            <span className="text-xs text-gray-500 font-medium mt-1">
-                                {user?.warehouse?.name ? user.warehouse.name : user?.role?.replace('_', ' ')}
-                            </span>
-                        </div>
-                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-sm">
                             {user?.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col items-start hidden sm:flex">
+                            <span className="text-xs font-bold text-gray-700 leading-none">{user?.name}</span>
+                            <span className="text-[10px] text-gray-400 font-medium mt-0.5 uppercase tracking-wide">
+                                {user?.role?.replace('_', ' ')}
+                            </span>
                         </div>
                     </button>
 
                     {showProfileMenu && (
-                        <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-2xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-fade-in">
-                            <div className="p-4 border-b border-gray-50 bg-gray-50/50">
-                                <p className="text-sm font-bold text-gray-900">{user?.name}</p>
-                                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                            </div>
-                            <div className="p-2">
-                                <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                    Account
-                                </div>
-                                <button className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2">
-                                    <User size={16} className="text-gray-400" /> Profile
+                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 ring-1 ring-black ring-opacity-5 z-50 overflow-hidden animate-scale-in origin-top-right">
+                            <div className="p-1">
+                                <button className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-indigo-600 rounded-lg transition-colors flex items-center gap-2 group">
+                                    <User size={16} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                                    Profile
                                 </button>
                                 <div className="my-1 border-t border-gray-100"></div>
                                 <button

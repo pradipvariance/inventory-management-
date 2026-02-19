@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Package, ShoppingCart, Truck, Users, Settings, LogOut, ArrowRightLeft, FileText, ShoppingBag } from 'lucide-react';
+import { Home, Package, ShoppingCart, Truck, Users, Settings, LogOut, ArrowRightLeft, FileText, ShoppingBag, Box } from 'lucide-react';
 import { useContext } from 'react';
 import AuthContext from '../context/AuthContext';
 
@@ -11,7 +11,7 @@ const Sidebar = () => {
         { name: 'Dashboard', href: '/', icon: Home, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Warehouses', href: '/warehouses', icon: Truck, roles: ['SUPER_ADMIN'] },
         { name: 'Products', href: '/products', icon: Package, roles: ['SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'] },
-        { name: 'Inventory', href: '/inventory', icon: ShoppingCart, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
+        { name: 'Inventory', href: '/inventory', icon: Box, roles: ['SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER'] },
         { name: 'Transfers', href: '/transfers', icon: ArrowRightLeft, roles: ['SUPER_ADMIN'] },
         { name: 'Adjustments', href: '/adjustments', icon: FileText, roles: ['SUPER_ADMIN'] },
         { name: 'Shop', href: '/shop', icon: ShoppingBag, roles: ['CUSTOMER'] },
@@ -24,42 +24,64 @@ const Sidebar = () => {
     const navigation = allNavigation.filter(item => item.roles.includes(user?.role));
 
     return (
-        <div className="flex flex-col w-64 bg-gray-800 text-white">
-            <div className="flex flex-col items-center justify-center h-20 shadow-md border-b border-gray-700 bg-gray-900 px-4 text-center">
-                <h1 className="text-sm font-bold text-white uppercase tracking-wider">
-                    {user?.role?.replace('_', ' ')} Dashboard
-                </h1>
+        <div className="flex flex-col w-72 bg-slate-900 text-white transition-all duration-300 border-r border-slate-800">
+            {/* Logo Area */}
+            <div className="flex items-center justify-center h-16 bg-slate-950 border-b border-slate-800 shadow-md">
+                <div className="flex items-center gap-2">
+                    <div className="bg-indigo-600 p-1.5 rounded-lg">
+                        <Box size={24} className="text-white" />
+                    </div>
+                    <h1 className="text-base font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent tracking-tight">
+                        IMS
+                    </h1>
+                </div>
             </div>
-            <ul className="flex-col py-4">
+
+            {/* Navigation */}
+            <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1">
+                {user?.role && (
+                    <div className="px-4 mb-6">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                            Menu
+                        </p>
+                    </div>
+                )}
+
                 {navigation.map((item) => {
                     const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
                     return (
-                        <li key={item.name}>
-                            <Link
-                                to={item.href}
-                                className={`flex flex-row items-center h-12 transform hover:translate-x-2 transition-transform ease-in duration-200 text-gray-400 hover:text-gray-100 ${location.pathname === item.href ? 'text-gray-100 bg-gray-700' : ''
-                                    }`}
-                            >
-                                <span className="inline-flex items-center justify-center h-12 w-12 text-lg text-gray-400">
-                                    <Icon size={20} />
-                                </span>
-                                <span className="text-sm font-medium">{item.name}</span>
-                            </Link>
-                        </li>
+                        <Link
+                            key={item.name}
+                            to={item.href}
+                            className={`flex items-center px-4 py-3 rounded-xl transition-all duration-200 group relative ${isActive
+                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50'
+                                : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                }`}
+                        >
+                            <Icon
+                                size={20}
+                                className={`mr-3 transition-colors ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-white'}`}
+                            />
+                            <span className="font-medium text-sm">{item.name}</span>
+                            {isActive && (
+                                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-white/20 rounded-l-full"></div>
+                            )}
+                        </Link>
                     );
                 })}
-                <li>
-                    <button
-                        onClick={logout}
-                        className="flex flex-row items-center h-12 transform hover:translate-x-2 transition-transform ease-in duration-200 text-gray-400 hover:text-red-400 w-full text-left"
-                    >
-                        <span className="inline-flex items-center justify-center h-12 w-12 text-lg text-gray-400">
-                            <LogOut size={20} />
-                        </span>
-                        <span className="text-sm font-medium">Logout</span>
-                    </button>
-                </li>
-            </ul>
+            </nav>
+
+            {/* Footer / User Info */}
+            <div className="p-4 border-t border-slate-800 bg-slate-950/50">
+                <button
+                    onClick={logout}
+                    className="flex w-full items-center px-4 py-2.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-red-400 transition-colors duration-200 group"
+                >
+                    <LogOut size={18} className="mr-3 group-hover:text-red-400 transition-colors" />
+                    <span className="text-sm font-medium">Sign Out</span>
+                </button>
+            </div>
         </div>
     );
 };
