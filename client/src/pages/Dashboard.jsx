@@ -117,19 +117,19 @@ const Dashboard = () => {
     const statCards = [
         {
             title: 'Total Revenue',
-            value: `$${(safeStats.totalRevenue || 0).toFixed(2)}`,
+            value: `$${(safeStats.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             icon: DollarSign,
             gradient: 'from-emerald-500 to-teal-600',
             iconColor: 'text-white',
-            show: user.role !== 'WAREHOUSE_ADMIN'
+            show: true
         },
         {
             title: 'Total Orders',
-            value: safeStats.orderCount || 0,
+            value: (safeStats.orderCount || 0).toLocaleString(),
             icon: ShoppingCart,
             gradient: 'from-blue-500 to-indigo-600',
             iconColor: 'text-white',
-            show: user.role !== 'WAREHOUSE_ADMIN'
+            show: true
         },
         {
             title: 'Products',
@@ -196,7 +196,7 @@ const Dashboard = () => {
                             <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                             Sales Statistics
                         </h2>
-                        <div className="h-80">
+                        <div className="h-80" style={{ height: '320px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={salesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
@@ -242,7 +242,9 @@ const Dashboard = () => {
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Product</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Warehouse</th>
                                     <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                                    {user.role === 'SUPER_ADMIN' && (
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
+                                    )}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-50">
@@ -262,19 +264,21 @@ const Dashboard = () => {
                                                 Qty: {item.itemQuantity}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <button
-                                                onClick={() => handleOpenQuickPO(item)}
-                                                className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
-                                            >
-                                                Order
-                                            </button>
-                                        </td>
+                                        {user.role === 'SUPER_ADMIN' && (
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <button
+                                                    onClick={() => handleOpenQuickPO(item)}
+                                                    className="text-indigo-600 hover:text-indigo-900 bg-indigo-50 px-3 py-1 rounded-md transition-colors"
+                                                >
+                                                    Order
+                                                </button>
+                                            </td>
+                                        )}
                                     </tr>
                                 ))}
                                 {lowStock.length === 0 && (
                                     <tr>
-                                        <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
+                                        <td colSpan={user.role === 'SUPER_ADMIN' ? "4" : "3"} className="px-6 py-8 text-center text-gray-500">
                                             <div className="flex flex-col items-center">
                                                 <div className="h-12 w-12 bg-green-50 rounded-full flex items-center justify-center mb-3">
                                                     <Layers size={24} className="text-green-500" />

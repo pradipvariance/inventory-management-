@@ -28,24 +28,13 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
 
-            {/* Super Admin Only Routes */}
+            {/* Super Admin Restricted Routes */}
             <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
               <Route element={<Layout />}>
                 <Route path="/warehouses" element={<Warehouses />} />
-              </Route>
-            </Route>
-
-            {/* Super Admin Routes */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
-              <Route element={<Layout />}>
                 <Route path="/adjustments" element={<Adjustments />} />
-              </Route>
-            </Route>
-
-            {/* Hidden/Restricted Routes */}
-            <Route element={<ProtectedRoute allowedRoles={[]} />}>
-              <Route element={<Layout />}>
-                <Route path="/suppliers" element={<Suppliers />} />
+                <Route path="/transfers" element={<StockTransfers />} />
+                <Route path="/purchase-orders" element={<PurchaseOrders />} />
               </Route>
             </Route>
 
@@ -58,17 +47,10 @@ function App() {
               </Route>
             </Route>
 
-            {/* Transfers - NOW SUPER ADMIN ONLY */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
+            {/* Hidden/Restricted Routes */}
+            <Route element={<ProtectedRoute allowedRoles={[]} />}>
               <Route element={<Layout />}>
-                <Route path="/transfers" element={<StockTransfers />} />
-              </Route>
-            </Route>
-
-            {/* Supplier Routes & Management */}
-            <Route element={<ProtectedRoute allowedRoles={['SUPPLIER', 'SUPER_ADMIN', 'WAREHOUSE_ADMIN', 'INVENTORY_MANAGER']} />}>
-              <Route element={<Layout />}>
-                <Route path="/purchase-orders" element={<PurchaseOrders />} />
+                <Route path="/suppliers" element={<Suppliers />} />
               </Route>
             </Route>
 

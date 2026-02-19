@@ -50,18 +50,14 @@ export const createProduct = async (req, res) => {
 
         if (targetWarehouseId) {
             const initialStock = req.body.initialStock ? parseInt(req.body.initialStock) : 0;
+            const initialBoxStock = req.body.boxQuantity ? parseInt(req.body.boxQuantity) : 0;
+
             let itemData = {
                 productId: product.id,
                 warehouseId: targetWarehouseId,
-                itemQuantity: 0,
-                boxQuantity: 0
+                itemQuantity: initialStock,
+                boxQuantity: initialBoxStock
             };
-
-            if (data.unitType === 'BOX') {
-                itemData.boxQuantity = initialStock;
-            } else {
-                itemData.itemQuantity = initialStock;
-            }
 
             await prisma.inventory.create({
                 data: itemData
@@ -105,7 +101,7 @@ export const getProducts = async (req, res) => {
         const userRole = req.user.role ? req.user.role.trim() : '';
         console.log(`Processing filter for Role: '${userRole}'`);
 
-        if (userRole === 'WAREHOUSE_ADMIN') {
+        if (userRole === 'WAREHOUSE_ADMIN' || userRole === 'INVENTORY_MANAGER') {
             if (!req.user.warehouseId) {
                 return res.json({ products: [], totalPages: 0, currentPage: parseInt(page), totalProducts: 0 });
             }
@@ -140,7 +136,7 @@ export const getProducts = async (req, res) => {
         const products = productsData.map(product => {
             let totalStock = 0;
             // Use sanitized role for check
-            if (userRole === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+            if ((userRole === 'WAREHOUSE_ADMIN' || userRole === 'INVENTORY_MANAGER') && req.user.warehouseId) {
                 // Only count stock for this warehouse (Frontend display)
                 totalStock = product.inventory
                     .filter(item => item.warehouseId === req.user.warehouseId)

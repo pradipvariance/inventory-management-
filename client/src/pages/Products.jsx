@@ -20,7 +20,7 @@ const Products = () => {
 
     const [formData, setFormData] = useState({
         name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null,
-        warehouseId: '', initialStock: ''
+        warehouseId: '', initialStock: '', boxQuantity: ''
     });
 
     useEffect(() => {
@@ -96,7 +96,9 @@ const Products = () => {
 
             // New fields
             if (formData.warehouseId) data.append('warehouseId', formData.warehouseId);
+            if (formData.warehouseId) data.append('warehouseId', formData.warehouseId);
             if (formData.initialStock) data.append('initialStock', formData.initialStock);
+            if (formData.boxQuantity) data.append('boxQuantity', formData.boxQuantity);
 
 
             await axios.post('http://localhost:5000/api/products', data, {
@@ -105,7 +107,7 @@ const Products = () => {
                     'Content-Type': 'multipart/form-data'
                 }
             });
-            setFormData({ name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null, warehouseId: '', initialStock: '' });
+            setFormData({ name: '', sku: '', barcode: '', category: '', unitType: 'ITEM', boxSize: '', minStockLevel: '', amount: '', image: null, warehouseId: '', initialStock: '', boxQuantity: '' });
             setImagePreview(null);
             setShowModal(false);
             fetchProducts();
@@ -294,14 +296,25 @@ const Products = () => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700">Initial Stock</label>
+                                        <label className="block text-sm font-medium text-gray-700">Initial Item Quantity</label>
                                         <input
                                             type="number"
                                             min="0"
                                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"
                                             value={formData.initialStock}
                                             onChange={(e) => setFormData({ ...formData, initialStock: e.target.value })}
-                                            placeholder="Quantity"
+                                            placeholder="Items"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700">Initial Box Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2"
+                                            value={formData.boxQuantity}
+                                            onChange={(e) => setFormData({ ...formData, boxQuantity: e.target.value })}
+                                            placeholder="Boxes"
                                         />
                                     </div>
                                 </div>
