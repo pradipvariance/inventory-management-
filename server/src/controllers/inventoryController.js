@@ -8,7 +8,7 @@ export const getAllInventory = async (req, res) => {
         const { warehouseId } = req.query;
         const where = {};
 
-        if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+        if ((req.user.role === 'WAREHOUSE_ADMIN' || req.user.role === 'INVENTORY_MANAGER') && req.user.warehouseId) {
             where.warehouseId = req.user.warehouseId;
         } else if (warehouseId) {
             where.warehouseId = warehouseId;

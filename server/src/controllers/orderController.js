@@ -32,24 +32,11 @@ export const createOrder = async (req, res) => {
                 });
             }
 
-            // 2. Create Order
-            const order = await prisma.order.create({
-                data: {
-                    customerId: customer.id,
-                    totalAmount,
-                    status: 'PENDING',
-                    orderItems: {
-                        create: items.map(item => ({
-                            productId: item.productId,
-                            quantity: item.quantity,
-                            price: item.price
-                        }))
-                    }
-                }
-            });
+            // 2. Prepare Items with Warehouse ID (Pre-check stock)
+            const orderItemsData = [];
 
-            // 3. Deduct Stock & Lock for Concurrency
             for (const item of items) {
+                // Find best stock (e.g. highest quantity)
                 const stock = await prisma.inventory.findMany({
                     where: { productId: item.productId, itemQuantity: { gte: item.quantity } },
                     orderBy: { itemQuantity: 'desc' },
@@ -60,8 +47,37 @@ export const createOrder = async (req, res) => {
                     throw new Error(`Insufficient stock for product ${item.productId}`);
                 }
 
+                // Add to list for order creation
+                orderItemsData.push({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    price: item.price,
+                    warehouseId: stock[0].warehouseId,
+                    inventoryId: stock[0].id // Keep ref for deduction later
+                });
+            }
+
+            // 3. Create Order
+            const order = await prisma.order.create({
+                data: {
+                    customerId: customer.id,
+                    totalAmount,
+                    status: 'PENDING',
+                    orderItems: {
+                        create: orderItemsData.map(item => ({
+                            productId: item.productId,
+                            quantity: item.quantity,
+                            price: item.price,
+                            warehouseId: item.warehouseId
+                        }))
+                    }
+                }
+            });
+
+            // 4. Deduct Stock & Lock for Concurrency
+            for (const item of orderItemsData) {
                 await prisma.inventory.update({
-                    where: { id: stock[0].id },
+                    where: { id: item.inventoryId },
                     data: { itemQuantity: { decrement: item.quantity } }
                 });
 
@@ -69,7 +85,7 @@ export const createOrder = async (req, res) => {
                 try {
                     getIO().to(`product:${item.productId}`).emit('stock_update', {
                         productId: item.productId,
-                        warehouseId: stock[0].warehouseId,
+                        warehouseId: item.warehouseId,
                         change: -item.quantity,
                         type: 'decrease'
                     });

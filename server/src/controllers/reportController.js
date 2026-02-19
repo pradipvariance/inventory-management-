@@ -3,116 +3,158 @@ import prisma from '../prisma.js';
 export const getDashboardStats = async (req, res) => {
     try {
         const { role, warehouseId } = req.user;
-        let whereOrder = {};
+        console.log(`[DEBUG DASHBOARD] Role: ${role}, WarehouseId: ${warehouseId}`);
 
-        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
-            // For stats, we might want to only show inventory in their warehouse
-            // Orders: maybe only orders that have items from this warehouse? 
-            // Or if orders are not warehouse-specific yet, maybe show 0 or hide?
-            // Since orders are linked to customers, and we hidden customers, maybe we hide order stats too.
-            // But for now let's just show global orders or maybe filtered if we had warehouseId on orders (we don't for sales orders yet, only purchase orders).
-            // Let's keep orders global or 0? 0 is safer to avoid confusion.
-            // Actually, let's filter Inventory count and Low Stock count.
-            // Revenue: if we can't filter by warehouse, maybe show 0 or "N/A"?
-            // Let's allow them to see total product count (global) but only their inventory specific low stock.
-        }
+        let productCount = 0;
+        let orderCount = 0;
+        let totalRevenue = 0;
+        let warehouseCount = 0;
+        let supplierCount = 0;
+        let lowStockCount = 0;
+        let inventoryCount = 0;
 
+        if ((role === 'WAREHOUSE_ADMIN' || role === 'INVENTORY_MANAGER') && warehouseId) {
+            // --- WAREHOUSE SPECIFIC LOGIC ---
 
-        let productCount;
-        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
-            // Strict filtering: Count products available in THIS warehouse
+            // 1. Product Count (Strict: active stock > 0 in this warehouse)
             const validInventory = await prisma.inventory.findMany({
-                where: {
-                    warehouseId: warehouseId,
-                    itemQuantity: { gt: 0 }
-                },
+                where: { warehouseId: warehouseId, itemQuantity: { gt: 0 } },
                 select: { productId: true }
             });
             const validProductIds = validInventory.map(i => i.productId);
             productCount = await prisma.product.count({
                 where: { id: { in: validProductIds } }
             });
-        } else {
-            productCount = await prisma.product.count();
-        }
+            console.log(`[DEBUG DASHBOARD] Warehouse Products: ${productCount}`);
 
-        const [orderCount, warehouseCount, supplierCount] = await Promise.all([
-            prisma.order.count(),   // Global orders 
-            prisma.warehouse.count(),
-            prisma.supplier.count()
-        ]);
+            // 2. Order Count (Orders linked to this warehouse via items)
+            orderCount = await prisma.order.count({
+                where: {
+                    orderItems: { some: { warehouseId: warehouseId } }
+                }
+            });
 
-        // Calculate total revenue from Orders
-        let totalRevenue = 0;
-        if (role !== 'WAREHOUSE_ADMIN') {
-            const orders = await prisma.order.findMany({ select: { totalAmount: true } });
-            totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
-        }
+            // 3. Revenue (Sum of items fulfilled by this warehouse)
+            const revenueItems = await prisma.orderItem.findMany({
+                where: { warehouseId: warehouseId },
+                select: { price: true, quantity: true }
+            });
+            totalRevenue = revenueItems.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0);
+            console.log(`[DEBUG DASHBOARD] Warehouse Orders: ${orderCount}, Revenue: ${totalRevenue}`);
 
-        // Calculate low stock count using raw query for accuracy vs product.minStockLevel
-        let lowStockCountResult;
-        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
-            lowStockCountResult = await prisma.$queryRaw`
+            // 4. Low Stock Count
+            const lowStockResult = await prisma.$queryRaw`
                 SELECT COUNT(*)::int as count FROM "Inventory" i
                 JOIN "Product" p ON i."productId" = p.id
                 WHERE i."itemQuantity" <= p."minStockLevel"
                 AND i."warehouseId" = ${warehouseId}
             `;
+            lowStockCount = Number(lowStockResult[0]?.count || 0);
+
+            // 5. Inventory Count
+            inventoryCount = await prisma.inventory.count({
+                where: { warehouseId: warehouseId }
+            });
+
+            warehouseCount = 1;
+            supplierCount = 0; // Not relevant for warehouse level
+
         } else {
-            lowStockCountResult = await prisma.$queryRaw`
+            // --- GLOBAL LOGIC ---
+
+            productCount = await prisma.product.count();
+
+            [orderCount, warehouseCount, supplierCount] = await Promise.all([
+                prisma.order.count(),
+                prisma.warehouse.count(),
+                prisma.supplier.count()
+            ]);
+
+            const orders = await prisma.order.findMany({ select: { totalAmount: true } });
+            totalRevenue = orders.reduce((sum, order) => sum + Number(order.totalAmount), 0);
+
+            const lowStockResult = await prisma.$queryRaw`
                 SELECT COUNT(*)::int as count FROM "Inventory" i
                 JOIN "Product" p ON i."productId" = p.id
                 WHERE i."itemQuantity" <= p."minStockLevel"
             `;
-        }
-        const lowStockCount = lowStockCountResult[0]?.count || 0;
+            lowStockCount = Number(lowStockResult[0]?.count || 0);
 
-        // Inventory Count (Specific to warehouse or global)
-        const inventoryCount = await prisma.inventory.count({
-            where: role === 'WAREHOUSE_ADMIN' ? { warehouseId } : {}
-        });
+            inventoryCount = await prisma.inventory.count();
+        }
 
         res.json({
-            productCount, // They can see total products available in system
-            orderCount: role === 'WAREHOUSE_ADMIN' ? 0 : orderCount,
-            warehouseCount: role === 'WAREHOUSE_ADMIN' ? 1 : warehouseCount,
-            supplierCount: role === 'WAREHOUSE_ADMIN' ? 0 : supplierCount,
+            productCount,
+            orderCount,
+            warehouseCount,
+            supplierCount,
             totalRevenue,
             lowStockCount,
             inventoryCount
         });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("ERROR in getDashboardStats:", error);
+        // Ensure we send a JSON response even on error to prevent frontend crashes
+        res.status(500).json({
+            message: error.message,
+            productCount: 0,
+            orderCount: 0,
+            totalRevenue: 0,
+            lowStockCount: 0
+        });
     }
 };
 
 export const getSalesChart = async (req, res) => {
     try {
-        const { role } = req.user;
-
-        if (role === 'WAREHOUSE_ADMIN') {
-            return res.json([]); // No sales access for now
-        }
+        const { role, warehouseId } = req.user;
 
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-        const orders = await prisma.order.findMany({
-            where: {
-                createdAt: { gte: sevenDaysAgo }
-            },
-            select: {
-                createdAt: true,
-                totalAmount: true
-            }
-        });
+        let salesByDate = {}; // { 'YYYY-MM-DD': amount }
 
-        // Group by date
-        const salesByDate = {};
-        orders.forEach(order => {
-            const date = order.createdAt.toISOString().split('T')[0];
-            salesByDate[date] = (salesByDate[date] || 0) + Number(order.totalAmount);
-        });
+        if ((role === 'WAREHOUSE_ADMIN' || role === 'INVENTORY_MANAGER') && warehouseId) {
+
+            // Warehouse Specific Sales (based on OrderItems)
+            const items = await prisma.orderItem.findMany({
+                where: {
+                    warehouseId: warehouseId,
+                    order: { createdAt: { gte: sevenDaysAgo } }
+                },
+                select: {
+                    price: true,
+                    quantity: true,
+                    order: { select: { createdAt: true } }
+                }
+            });
+
+            items.forEach(item => {
+                if (item.order && item.order.createdAt) {
+                    const date = item.order.createdAt.toISOString().split('T')[0];
+                    const amount = Number(item.price) * item.quantity;
+                    salesByDate[date] = (salesByDate[date] || 0) + amount;
+                }
+            });
+
+        } else {
+            // Global Sales
+            const orders = await prisma.order.findMany({
+                where: {
+                    createdAt: { gte: sevenDaysAgo }
+                },
+                select: {
+                    createdAt: true,
+                    totalAmount: true
+                }
+            });
+
+            orders.forEach(order => {
+                const date = order.createdAt.toISOString().split('T')[0];
+                salesByDate[date] = (salesByDate[date] || 0) + Number(order.totalAmount);
+            });
+        }
 
         // Format for Recharts (Array of objects)
         const chartData = [];
@@ -127,8 +169,10 @@ export const getSalesChart = async (req, res) => {
         }
 
         res.json(chartData);
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error("ERROR in getSalesChart:", error);
+        res.status(500).json({ message: error.message, data: [] });
     }
 };
 
@@ -140,7 +184,7 @@ export const getLowStockItems = async (req, res) => {
         // We only start with a basic query and append warehouse condition if needed
         let lowStockIds;
 
-        if (role === 'WAREHOUSE_ADMIN' && warehouseId) {
+        if ((role === 'WAREHOUSE_ADMIN' || role === 'INVENTORY_MANAGER') && warehouseId) {
             lowStockIds = await prisma.$queryRaw`
                 SELECT i.id FROM "Inventory" i
                 JOIN "Product" p ON i."productId" = p.id
@@ -173,5 +217,51 @@ export const getLowStockItems = async (req, res) => {
     } catch (error) {
         console.error("Error fetching low stock items:", error);
         res.status(500).json({ message: error.message });
+    }
+};
+
+export const getDebugData = async (req, res) => {
+    try {
+        const managers = await prisma.user.findMany({
+            where: { role: 'INVENTORY_MANAGER' },
+            include: { warehouse: true }
+        });
+
+        const debugResults = [];
+
+        for (const manager of managers) {
+            const wid = manager.warehouseId;
+            let data = {
+                user: manager.name,
+                warehouseId: wid,
+                warehouseName: manager.warehouse?.name,
+                hasWarehouseId: !!wid
+            };
+
+            if (wid) {
+                const allInv = await prisma.inventory.count({ where: { warehouseId: wid } });
+                const activeInv = await prisma.inventory.count({ where: { warehouseId: wid, itemQuantity: { gt: 0 } } });
+                const orderItems = await prisma.orderItem.count({ where: { warehouseId: wid } });
+
+                const lowStockRaw = await prisma.$queryRaw`
+                    SELECT COUNT(*)::int as count FROM "Inventory" i
+                    JOIN "Product" p ON i."productId" = p.id
+                    WHERE i."itemQuantity" <= p."minStockLevel"
+                    AND i."warehouseId" = ${wid}
+                `;
+
+                data.stats = {
+                    totalInventoryRows: allInv,
+                    activeInventoryRows: activeInv,
+                    linkedOrderItems: orderItems,
+                    lowStockCountRaw: Number(lowStockRaw[0]?.count || 0)
+                };
+            }
+            debugResults.push(data);
+        }
+
+        res.json(debugResults);
+    } catch (error) {
+        res.status(200).json({ error: "DEBUG ERROR: " + error.message, stack: error.stack });
     }
 };

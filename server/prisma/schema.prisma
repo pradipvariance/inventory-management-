@@ -6,7 +6,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
 enum Role {
   SUPER_ADMIN
   WAREHOUSE_ADMIN
@@ -36,7 +35,7 @@ enum OrderStatus {
 enum PurchaseOrderStatus {
   PENDING
   CONFIRMED
-  DELIVERED 
+  DELIVERED
   RECEIVED
   CANCELLED
 }
@@ -75,6 +74,7 @@ model Warehouse {
   stockTransfersTo   StockTransfer[]   @relation("ToWarehouse")
   creditDebitNotes   CreditDebitNote[]
   purchaseOrders     PurchaseOrder[]
+  orderItems         OrderItem[]
   admins             User[]            @relation("WarehouseAdmin")
 }
 
@@ -171,8 +171,10 @@ model OrderItem {
   quantity  Int
   price     Decimal
 
-  order   Order   @relation(fields: [orderId], references: [id])
-  product Product @relation(fields: [productId], references: [id])
+  order       Order      @relation(fields: [orderId], references: [id])
+  product     Product    @relation(fields: [productId], references: [id])
+  warehouseId String?
+  warehouse   Warehouse? @relation(fields: [warehouseId], references: [id])
 
   @@index([orderId, productId])
 }

@@ -69,19 +69,19 @@ const Dashboard = () => {
     const statCards = [
         {
             title: 'Total Revenue',
-            value: `$${(safeStats.totalRevenue || 0).toFixed(2)}`,
+            value: `$${(safeStats.totalRevenue || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             icon: DollarSign,
             gradient: 'from-emerald-500 to-teal-600',
             iconColor: 'text-white',
-            show: user.role !== 'WAREHOUSE_ADMIN'
+            show: true
         },
         {
             title: 'Total Orders',
-            value: safeStats.orderCount || 0,
+            value: (safeStats.orderCount || 0).toLocaleString(),
             icon: ShoppingCart,
             gradient: 'from-blue-500 to-indigo-600',
             iconColor: 'text-white',
-            show: user.role !== 'WAREHOUSE_ADMIN'
+            show: true
         },
         {
             title: 'Products',
@@ -148,7 +148,7 @@ const Dashboard = () => {
                             <span className="w-1.5 h-6 bg-indigo-500 rounded-full"></span>
                             Sales Statistics
                         </h2>
-                        <div className="h-80">
+                        <div className="h-80" style={{ height: '320px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={salesData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
