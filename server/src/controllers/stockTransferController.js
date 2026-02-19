@@ -44,7 +44,8 @@ export const createTransfer = async (req, res) => {
                 toWarehouseId,
                 itemQuantity,
                 boxQuantity,
-                status: 'PENDING'
+                status: 'PENDING',
+                createdById: req.user.id
             },
         });
 
@@ -208,6 +209,12 @@ export const getPendingTransfersCount = async (req, res) => {
                 product: true,
                 fromWarehouse: true,
                 toWarehouse: true,
+                createdBy: {
+                    select: {
+                        name: true,
+                        role: true
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });

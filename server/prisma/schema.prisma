@@ -57,7 +57,8 @@ model User {
   warehouseId String?
   warehouse   Warehouse? @relation("WarehouseAdmin", fields: [warehouseId], references: [id])
 
-  purchaseOrders PurchaseOrder[] @relation("SupplierOrders")
+  purchaseOrders   PurchaseOrder[] @relation("SupplierOrders")
+  createdTransfers StockTransfer[] @relation("CreatedTransfers")
 
   @@index([email])
   @@index([role])
@@ -135,6 +136,8 @@ model StockTransfer {
   boxQuantity     Int
   status          TransferStatus @default(PENDING)
   createdAt       DateTime       @default(now())
+  createdById     String?
+  createdBy       User?          @relation("CreatedTransfers", fields: [createdById], references: [id])
 
   product       Product   @relation(fields: [productId], references: [id])
   fromWarehouse Warehouse @relation("FromWarehouse", fields: [fromWarehouseId], references: [id])

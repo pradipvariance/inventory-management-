@@ -34,6 +34,12 @@ function App() {
                 <Route path="/warehouses" element={<Warehouses />} />
                 <Route path="/adjustments" element={<Adjustments />} />
                 <Route path="/transfers" element={<StockTransfers />} />
+              </Route>
+            </Route>
+
+            {/* Purchase Orders - Super Admin & Supplier */}
+            <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'SUPPLIER']} />}>
+              <Route element={<Layout />}>
                 <Route path="/purchase-orders" element={<PurchaseOrders />} />
               </Route>
             </Route>

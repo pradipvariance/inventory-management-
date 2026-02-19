@@ -18,7 +18,7 @@ const Sidebar = () => {
         { name: 'Cart', href: '/cart', icon: ShoppingCart, roles: ['CUSTOMER'] },
         { name: 'Orders', href: '/orders', icon: FileText, roles: ['CUSTOMER'] },
         { name: 'Suppliers', href: '/suppliers', icon: Users, roles: [] },
-        { name: 'Purchase Orders', href: '/purchase-orders', icon: FileText, roles: ['SUPER_ADMIN'] },
+        { name: 'Purchase Orders', href: '/purchase-orders', icon: FileText, roles: ['SUPER_ADMIN', 'SUPPLIER'] },
     ];
 
     const navigation = allNavigation.filter(item => item.roles.includes(user?.role));

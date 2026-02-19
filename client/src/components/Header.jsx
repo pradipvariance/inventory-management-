@@ -23,7 +23,7 @@ const Header = () => {
     };
 
     useEffect(() => {
-        if (user?.role !== 'SUPER_ADMIN') {
+        if (user?.role === 'WAREHOUSE_ADMIN') {
             fetchNotifications();
             const interval = setInterval(fetchNotifications, 60000); // Poll every minute
             return () => clearInterval(interval);
@@ -73,8 +73,8 @@ const Header = () => {
             {/* Right Side - Actions */}
             <div className="flex items-center gap-6">
 
-                {/* Notification Bell */}
-                {user?.role !== 'SUPER_ADMIN' && (
+                {/* Notification Bell - Restricted to Warehouse Admin */}
+                {user?.role === 'WAREHOUSE_ADMIN' && (
                     <div className="relative">
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
