@@ -3,6 +3,7 @@ import { z } from 'zod';
 import csv from 'csv-parser';
 import fs from 'fs';
 import { checkWarehouseCapacity } from '../utils/inventoryUtils.js';
+import { getIO } from '../socket.js';
 
 const productSchema = z.object({
     name: z.string().min(2),
@@ -40,7 +41,10 @@ export const createProduct = async (req, res) => {
         }
 
         const product = await prisma.$transaction(async (tx) => {
-            const product = await tx.product.create({ data });
+            const product = await tx.product.create({
+                data,
+                include: { inventory: true }
+            });
 
             // Create Inventory record if Warehouse is specified
             let targetWarehouseId = null;
@@ -74,6 +78,10 @@ export const createProduct = async (req, res) => {
         });
 
         res.status(201).json(product);
+
+        try {
+            getIO().to('management').emit('product_updated', product);
+        } catch (err) { }
     } catch (error) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         if (error instanceof z.ZodError) return res.status(400).json({ message: error.errors });
@@ -205,8 +213,14 @@ export const updateProduct = async (req, res) => {
         const product = await prisma.product.update({
             where: { id: req.params.id },
             data,
+            include: { inventory: true }
         });
         res.json(product);
+
+        try {
+            getIO().to('management').emit('product_updated', product);
+            getIO().to(`product:${product.id}`).emit('product_detail_updated', product);
+        } catch (err) { }
     } catch (error) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         if (error.code === 'P2025') return res.status(404).json({ message: 'Product not found' });
@@ -219,6 +233,10 @@ export const deleteProduct = async (req, res) => {
     try {
         await prisma.product.delete({ where: { id: req.params.id } });
         res.json({ message: 'Product deleted' });
+
+        try {
+            getIO().to('management').emit('product_deleted', req.params.id);
+        } catch (err) { }
     } catch (error) {
         if (error.code === 'P2025') return res.status(404).json({ message: 'Product not found' });
         res.status(500).json({ message: error.message });

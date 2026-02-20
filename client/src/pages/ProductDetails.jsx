@@ -3,10 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
 import Loader from '../components/Loader';
+import { useSocket } from '../context/SocketContext';
 
 const ProductDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const socket = useSocket();
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
     const [imagePreview, setImagePreview] = useState(null);
@@ -22,39 +24,66 @@ const ProductDetails = () => {
         image: null
     });
 
-    useEffect(() => {
-        const fetchProduct = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const { data } = await axios.get(`http://localhost:5000/api/products/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setProduct(data);
-                setFormData({
-                    name: data.name,
-                    sku: data.sku,
-                    barcode: data.barcode,
-                    category: data.category,
-                    unitType: data.unitType,
-                    boxSize: data.boxSize || '',
-                    minStockLevel: data.minStockLevel,
-                    amount: data.amount,
-                    image: null // We don't set the file object here, only if user changes it
-                });
-                if (data.image) {
-                    setImagePreview(`/${data.image}`);
-                }
-            } catch (error) {
-                console.error('Error fetching product details:', error);
+    const fetchProduct = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get(`http://localhost:5000/api/products/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setProduct(data);
+            setFormData({
+                name: data.name,
+                sku: data.sku,
+                barcode: data.barcode,
+                category: data.category,
+                unitType: data.unitType,
+                boxSize: data.boxSize || '',
+                minStockLevel: data.minStockLevel,
+                amount: data.amount,
+                image: null
+            });
+            if (data.image) {
+                setImagePreview(`/${data.image}`);
+            }
+
+        } catch (error) {
+            console.error('Error fetching product details:', error);
+            if (!product) {
                 alert('Failed to fetch product details');
                 navigate('/products');
-            } finally {
-                setLoading(false);
             }
-        };
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchProduct();
     }, [id, navigate]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.emit('subscribe_product', id);
+
+        socket.on('product_detail_updated', (updatedProduct) => {
+            if (updatedProduct.id === id) {
+                setProduct(updatedProduct);
+            }
+        });
+
+        socket.on('product_deleted', (deletedId) => {
+            if (deletedId === id) {
+                alert('This product has been deleted');
+                navigate('/products');
+            }
+        });
+
+        return () => {
+            socket.off('product_detail_updated');
+            socket.off('product_deleted');
+        };
+    }, [socket, id, navigate]);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -98,6 +127,7 @@ const ProductDetails = () => {
 
     return (
         <div className="p-6 max-w-4xl mx-auto animate-fade-in">
+
             <button
                 onClick={() => navigate('/products')}
                 className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"

@@ -1,4 +1,6 @@
 import prisma from '../prisma.js';
+import { getIO } from '../socket.js';
+import { calculateWarehouseUsage } from '../utils/inventoryUtils.js';
 
 export const getAllInventory = async (req, res) => {
     const { page = 1, limit = 20, search } = req.query;
@@ -121,6 +123,21 @@ export const adjustInventory = async (req, res) => {
                     boxQuantity: boxesRemovedForNote
                 }
             });
+
+            // 5. Fetch full warehouse for socket emission
+            const fullWarehouse = await tx.warehouse.findUnique({
+                where: { id: warehouseId },
+                include: { inventory: { include: { product: true } } }
+            });
+
+            const warehouseWithUsage = {
+                ...fullWarehouse,
+                usage: calculateWarehouseUsage(fullWarehouse)
+            };
+
+            try {
+                getIO().to('management').emit('warehouse_updated', warehouseWithUsage);
+            } catch (err) { }
 
             return updatedInventory;
         });

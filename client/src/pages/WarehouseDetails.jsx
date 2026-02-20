@@ -3,9 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Save, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 
 const WarehouseDetails = () => {
     const { user } = useContext(AuthContext);
+    const socket = useSocket();
     const { id } = useParams();
     const navigate = useNavigate();
     const [warehouse, setWarehouse] = useState(null);
@@ -25,30 +27,55 @@ const WarehouseDetails = () => {
     const [selectedItem, setSelectedItem] = useState(null);
     const [adjData, setAdjData] = useState({ type: 'DELETE_SPECIFIC', quantity: '', reason: '' });
 
-    useEffect(() => {
-        const fetchWarehouse = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                const { data } = await axios.get(`http://localhost:5000/api/warehouses/${id}`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                setWarehouse(data);
-                setFormData({
-                    name: data.name,
-                    location: data.location,
-                    capacity: data.capacity
-                });
-            } catch (error) {
-                console.error('Error fetching warehouse details:', error);
+    const fetchWarehouse = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const { data } = await axios.get(`http://localhost:5000/api/warehouses/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setWarehouse(data);
+            setFormData({
+                name: data.name,
+                location: data.location,
+                capacity: data.capacity
+            });
+        } catch (error) {
+            console.error('Error fetching warehouse details:', error);
+            if (!warehouse) { // Only navigate away if it's the initial load
                 alert('Failed to fetch warehouse details');
                 navigate('/warehouses');
-            } finally {
-                setLoading(false);
             }
-        };
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchWarehouse();
     }, [id, navigate]);
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on('warehouse_updated', (updatedWarehouse) => {
+            if (updatedWarehouse.id === id) {
+                // If the update came from another user, we refresh our state
+                setWarehouse(updatedWarehouse);
+            }
+        });
+
+        socket.on('warehouse_deleted', (deletedId) => {
+            if (deletedId === id) {
+                alert('This warehouse has been deleted');
+                navigate('/warehouses');
+            }
+        });
+
+        return () => {
+            socket.off('warehouse_updated');
+            socket.off('warehouse_deleted');
+        };
+    }, [socket, id, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

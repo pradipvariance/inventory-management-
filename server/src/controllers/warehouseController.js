@@ -1,6 +1,7 @@
 import prisma from '../prisma.js';
 import { z } from 'zod';
 import { calculateWarehouseUsage } from '../utils/inventoryUtils.js';
+import { getIO } from '../socket.js';
 
 const warehouseSchema = z.object({
     name: z.string().min(2),
@@ -13,8 +14,19 @@ export const createWarehouse = async (req, res) => {
         const { name, location, capacity } = warehouseSchema.parse(req.body);
         const warehouse = await prisma.warehouse.create({
             data: { name, location, capacity },
+            include: { inventory: { include: { product: true } } }
         });
-        res.status(201).json(warehouse);
+
+        const warehouseWithUsage = {
+            ...warehouse,
+            usage: calculateWarehouseUsage(warehouse)
+        };
+
+        res.status(201).json(warehouseWithUsage);
+
+        try {
+            getIO().to('management').emit('warehouse_updated', warehouseWithUsage);
+        } catch (err) { }
     } catch (error) {
         if (error instanceof z.ZodError) {
             return res.status(400).json({ message: error.errors });
@@ -74,8 +86,19 @@ export const updateWarehouse = async (req, res) => {
         const warehouse = await prisma.warehouse.update({
             where: { id: req.params.id },
             data: { name, location, capacity },
+            include: { inventory: { include: { product: true } } }
         });
-        res.json(warehouse);
+
+        const warehouseWithUsage = {
+            ...warehouse,
+            usage: calculateWarehouseUsage(warehouse)
+        };
+
+        res.json(warehouseWithUsage);
+
+        try {
+            getIO().to('management').emit('warehouse_updated', warehouseWithUsage);
+        } catch (err) { }
     } catch (error) {
         if (error.code === 'P2025') return res.status(404).json({ message: 'Warehouse not found' });
         if (error instanceof z.ZodError) return res.status(400).json({ message: error.errors });
@@ -87,6 +110,10 @@ export const deleteWarehouse = async (req, res) => {
     try {
         await prisma.warehouse.delete({ where: { id: req.params.id } });
         res.json({ message: 'Warehouse deleted' });
+
+        try {
+            getIO().to('management').emit('warehouse_deleted', req.params.id);
+        } catch (err) { }
     } catch (error) {
         if (error.code === 'P2025') return res.status(404).json({ message: 'Warehouse not found' });
         res.status(500).json({ message: error.message });
