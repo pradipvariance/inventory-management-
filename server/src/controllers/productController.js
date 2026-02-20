@@ -305,3 +305,15 @@ export const debugInventory = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+export const getCategories = async (req, res) => {
+    try {
+        const categories = await prisma.product.findMany({
+            select: { category: true },
+            distinct: ['category'],
+        });
+        res.json(categories.map(c => c.category));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

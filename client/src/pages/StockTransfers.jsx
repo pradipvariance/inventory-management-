@@ -1,9 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useRef } from 'react';
 import axios from 'axios';
-import { ArrowRightLeft, Check, X } from 'lucide-react';
+import { ArrowRightLeft, Check, X, ChevronDown, ArrowRight, Search } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import Loader from '../components/Loader';
-import SearchableSelect from '../components/SearchableSelect';
 import SearchableCombobox from '../components/SearchableCombobox';
 
 const StockTransfers = () => {
@@ -18,7 +17,10 @@ const StockTransfers = () => {
     const [toWarehouse, setToWarehouse] = useState('');
     const [product, setProduct] = useState('');
     const [unitsPerBox, setUnitsPerBox] = useState('');
-    const [itemQuantity, setItemQuantity] = useState(0);/* ... */
+    const [itemQuantity, setItemQuantity] = useState(0);
+    const [boxQuantity, setBoxQuantity] = useState(0);
+    const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     // Update unitsPerBox when product changes
     useEffect(() => {
@@ -29,9 +31,6 @@ const StockTransfers = () => {
             }
         }
     }, [product, products]);
-    const [boxQuantity, setBoxQuantity] = useState(0);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
 
     const fetchData = async () => {
         try {
@@ -74,8 +73,11 @@ const StockTransfers = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchData();
+            setSuccess(`Transfer ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+            setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
-            alert('Error processing transfer');
+            setError(error.response?.data?.message || 'Error processing transfer');
+            setTimeout(() => setError(''), 3000);
         }
     };
 
@@ -83,6 +85,11 @@ const StockTransfers = () => {
         e.preventDefault();
         setError('');
         setSuccess('');
+
+        if (!product) { setError('Please select a product'); return; }
+        if (!fromWarehouse) { setError('Please select source warehouse'); return; }
+        if (!toWarehouse) { setError('Please select destination warehouse'); return; }
+        if (parseInt(itemQuantity) <= 0) { setError('Please enter a valid quantity'); return; }
 
         try {
             const token = localStorage.getItem('token');
@@ -103,6 +110,7 @@ const StockTransfers = () => {
             setItemQuantity(0);
             setBoxQuantity(0);
             fetchData();
+            setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
             setError(error.response?.data?.message || 'Transfer failed');
         }
@@ -110,169 +118,275 @@ const StockTransfers = () => {
 
     if (loading) return <Loader text="Loading Transfers..." />;
 
-    const canApprove = user?.role === 'WAREHOUSE_ADMIN';
+    const canApprove = user?.role === 'WAREHOUSE_ADMIN' || user?.role === 'SUPER_ADMIN';
+    const selectedProduct = products.find(p => p.id === product);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 animate-fade-in">
-            {/* Transfer Form */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 h-fit">
-                <h2 className="text-lg font-bold mb-3 flex items-center gap-2 text-gray-900">
-                    <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                        <ArrowRightLeft size={20} />
-                    </div>
-                    Initiate Stock Transfer
-                </h2>
-
-                {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg text-sm font-medium mb-3 border border-red-100 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>{error}</div>}
-                {success && <div className="bg-green-50 text-green-700 p-3 rounded-lg text-sm font-medium mb-3 border border-green-100 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>{success}</div>}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <SearchableCombobox
-                            label="Product"
-                            placeholder="Select Product..."
-                            options={products.map(p => ({ value: p.id, label: p.name, subLabel: p.sku }))}
-                            value={product}
-                            onChange={(val) => setProduct(val)}
-                            required
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">From Warehouse</label>
-                            <select
-                                required
-                                className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all"
-                                value={fromWarehouse}
-                                onChange={e => {
-                                    setFromWarehouse(e.target.value);
-                                    if (e.target.value === toWarehouse) setToWarehouse('');
-                                }}
-                            >
-                                <option value="">Select Source...</option>
-                                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">To Warehouse</label>
-                            <select
-                                required
-                                className={`block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all ${!fromWarehouse ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-50'}`}
-                                value={toWarehouse}
-                                onChange={e => setToWarehouse(e.target.value)}
-                                disabled={!fromWarehouse}
-                            >
-                                <option value="">Select Destination...</option>
-                                {warehouses
-                                    .filter(w => w.id !== fromWarehouse)
-                                    .map(w => <option key={w.id} value={w.id}>{w.name}</option>)
-                                }
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Units Per Box (for calculation)</label>
-                        <input
-                            type="number"
-                            min="1"
-                            className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-gray-900 transition-all"
-                            value={unitsPerBox}
-                            onChange={e => setUnitsPerBox(e.target.value)}
-                            placeholder="Enter units per box if missing"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Item Quantity</label>
-                            <input type="number" min="0" className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-gray-900 transition-all" value={itemQuantity} onChange={e => setItemQuantity(e.target.value)} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Box Quantity</label>
-                            <input type="number" min="0" className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-gray-900 transition-all" value={boxQuantity} onChange={e => setBoxQuantity(e.target.value)} />
-                        </div>
-                    </div>
-
-                    <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-sm mt-2 active:scale-95">
-                        Request Transfer
-                    </button>
-                </form>
+        <div className="space-y-6 animate-fade-in p-4 sm:p-6 max-w-[1600px] mx-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Stock Transfers</h1>
+                    <p className="text-gray-500 mt-1">Manage and track inventory movement between warehouses.</p>
+                </div>
             </div>
 
-            {/* Transfer History */}
-            <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 h-fit max-h-[600px] overflow-hidden flex flex-col">
-                <h2 className="text-lg font-bold mb-3 text-gray-900 flex items-center justify-between">
-                    Transfer History
-                    <span className="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full border border-gray-200">{transfers.length} request{transfers.length !== 1 ? 's' : ''}</span>
-                </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Left Column: Initiation Form */}
+                <div className="space-y-6 flex flex-col h-full">
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 h-fit">
+                        <h2 className="text-lg font-bold mb-5 flex items-center gap-2 text-slate-900">
+                            <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                                <ArrowRightLeft size={20} strokeWidth={2.5} />
+                            </div>
+                            Initiate Transfer
+                        </h2>
 
-                <div className="overflow-y-auto pr-1 custom-scrollbar flex-1">
-                    <table className="w-full text-left border-collapse">
-                        <thead className="sticky top-0 bg-white z-10 shadow-sm">
-                            <tr className="border-b border-gray-200 bg-gray-50">
-                                <th className="px-3 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Product</th>
-                                <th className="px-3 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Route</th>
-                                <th className="px-3 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider">Qty</th>
-                                <th className="px-3 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">Status</th>
-                                {canApprove && <th className="px-3 py-3 text-xs font-bold text-gray-600 uppercase tracking-wider text-center">Action</th>}
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100">
-                            {transfers.map(t => (
-                                <tr key={t.id} className="hover:bg-gray-50 transition-colors group">
-                                    <td className="px-3 py-3 text-sm font-medium text-gray-900">
-                                        {t.product.name}
-                                        <span className="block text-xs text-gray-400 font-normal">{t.product.sku}</span>
-                                    </td>
-                                    <td className="px-3 py-3 text-xs text-gray-500">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="font-medium text-gray-700">{t.fromWarehouse.name}</span>
-                                            <span className="text-gray-400 rotate-90 w-fit ml-1">↓</span>
-                                            <span className="font-medium text-gray-700">{t.toWarehouse.name}</span>
+                        {error && (
+                            <div className="bg-rose-50 text-rose-700 p-4 rounded-xl text-sm font-medium mb-6 border border-rose-100 flex items-center gap-3 animate-shake">
+                                <X size={18} className="text-rose-500" />
+                                {error}
+                            </div>
+                        )}
+                        {success && (
+                            <div className="bg-emerald-50 text-emerald-700 p-4 rounded-xl text-sm font-medium mb-6 border border-emerald-100 flex items-center gap-3 animate-fade-in">
+                                <Check size={18} className="text-emerald-500" />
+                                {success}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Select Product</label>
+                                    <SearchableCombobox
+                                        placeholder="Search for a product..."
+                                        options={products.map(p => ({
+                                            value: p.id,
+                                            label: p.name,
+                                            subLabel: `SKU: ${p.sku}`
+                                        }))}
+                                        value={product}
+                                        onChange={(val) => setProduct(val)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">From Warehouse</label>
+                                        <div className="relative">
+                                            <select
+                                                required
+                                                className="appearance-none block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all cursor-pointer"
+                                                value={fromWarehouse}
+                                                onChange={e => {
+                                                    setFromWarehouse(e.target.value);
+                                                    if (e.target.value === toWarehouse) setToWarehouse('');
+                                                }}
+                                            >
+                                                <option value="">Select source...</option>
+                                                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                                                <ChevronDown size={16} className="text-slate-400" />
+                                            </div>
                                         </div>
-                                    </td>
-                                    <td className="px-3 py-3 text-sm text-gray-900 font-medium">
-                                        {t.itemQuantity > 0 && <span className="block">{t.itemQuantity} Items</span>}
-                                        {t.boxQuantity > 0 && <span className="block text-xs text-gray-500">{t.boxQuantity} Boxes</span>}
-                                    </td>
-                                    <td className="px-3 py-3 text-center">
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border uppercase tracking-wide ${t.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' :
-                                            t.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                'bg-amber-50 text-amber-700 border-amber-200'
-                                            }`}>
-                                            {t.status}
-                                        </span>
-                                    </td>
-                                    {canApprove && (
-                                        <td className="px-3 py-3 text-center">
-                                            {t.status === 'PENDING' && (
-                                                (user.role === 'SUPER_ADMIN' || (user.role === 'WAREHOUSE_ADMIN' && user.warehouseId === t.toWarehouseId)) ? (
-                                                    <div className="flex justify-center gap-2">
-                                                        <button onClick={() => processTransfer(t.id, 'approve')} className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors" title="Approve">
-                                                            <Check size={16} />
-                                                        </button>
-                                                        <button onClick={() => processTransfer(t.id, 'reject')} className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="Reject">
-                                                            <X size={16} />
-                                                        </button>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">To Warehouse</label>
+                                        <div className="relative">
+                                            <select
+                                                required
+                                                className={`appearance-none block w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all cursor-pointer ${!fromWarehouse ? 'bg-slate-100 text-slate-400 cursor-not-allowed opacity-60' : 'bg-slate-50'
+                                                    }`}
+                                                value={toWarehouse}
+                                                onChange={e => setToWarehouse(e.target.value)}
+                                                disabled={!fromWarehouse}
+                                            >
+                                                <option value="">Select destination...</option>
+                                                {warehouses
+                                                    .filter(w => w.id !== fromWarehouse)
+                                                    .map(w => <option key={w.id} value={w.id}>{w.name}</option>)
+                                                }
+                                            </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                                                <ChevronDown size={16} className="text-slate-400" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 pt-2">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Item Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            required
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 font-semibold transition-all"
+                                            value={itemQuantity}
+                                            onChange={e => setItemQuantity(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Box Quantity</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 font-semibold transition-all"
+                                            value={boxQuantity}
+                                            onChange={e => setBoxQuantity(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 active:scale-[0.98] mt-4"
+                            >
+                                Send Transfer Request
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Selected Product Details */}
+                    {selectedProduct && (
+                        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm bg-gradient-to-br from-white to-indigo-50/30">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Product Context</h3>
+                            <div className="flex items-start gap-4">
+                                {selectedProduct.image ? (
+                                    <img
+                                        src={`/${selectedProduct.image}`}
+                                        alt={selectedProduct.name}
+                                        className="h-16 w-16 object-cover rounded-xl border border-slate-200 shadow-sm"
+                                    />
+                                ) : (
+                                    <div className="h-16 w-16 bg-white rounded-xl flex items-center justify-center border border-slate-200 shadow-sm">
+                                        <ArrowRightLeft size={24} className="text-indigo-400" />
+                                    </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="text-base font-bold text-slate-900 truncate">{selectedProduct.name}</h3>
+                                    <p className="text-xs text-slate-500 font-mono mt-0.5">SKU: {selectedProduct.sku}</p>
+                                    <div className="mt-3 grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">Box Size</p>
+                                            <p className="text-sm font-semibold text-slate-700">{selectedProduct.boxSize ? `${selectedProduct.boxSize} per box` : 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight">Price</p>
+                                            <p className="text-sm font-bold text-indigo-600">${selectedProduct.amount || '0.00'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Column: Transfer History */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-900">Transfer History</h2>
+                            <p className="text-xs text-slate-500 mt-0.5">Recent stock movement requests.</p>
+                        </div>
+                        <div className="bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
+                            <span className="text-xs font-bold text-slate-600">{transfers.length} Total</span>
+                        </div>
+                    </div>
+
+                    <div className="overflow-x-auto flex-1">
+                        {transfers.length === 0 ? (
+                            <div className="py-24 text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4 border border-slate-100">
+                                    <ArrowRightLeft size={28} className="text-slate-300" />
+                                </div>
+                                <p className="text-slate-900 font-bold">No transfers found</p>
+                                <p className="text-xs text-slate-500 mt-1 max-w-[200px] mx-auto">Initiate a transfer request from the form to see history here.</p>
+                            </div>
+                        ) : (
+                            <table className="min-w-full divide-y divide-slate-100">
+                                <thead className="bg-slate-50/50">
+                                    <tr>
+                                        <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Product</th>
+                                        <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Route</th>
+                                        <th className="px-5 py-3 text-center text-[11px] font-bold text-slate-500 uppercase tracking-wider">Qty</th>
+                                        <th className="px-5 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                                        {canApprove && <th className="px-5 py-3 text-right text-[11px] font-bold text-slate-500 uppercase tracking-wider">Actions</th>}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-slate-100">
+                                    {transfers.map(t => (
+                                        <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                <div className="text-sm font-bold text-slate-900 truncate max-w-[150px]">{t.product.name}</div>
+                                                <div className="text-[10px] text-slate-400 font-mono tracking-tighter uppercase mt-0.5">SKU: {t.product.sku}</div>
+                                            </td>
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <span className="text-xs font-semibold text-slate-700">{t.fromWarehouse.name}</span>
+                                                    <div className="flex items-center gap-1.5 py-0.5">
+                                                        <div className="h-px bg-slate-200 flex-1"></div>
+                                                        <ArrowRight size={10} className="text-indigo-400" />
+                                                        <div className="h-px bg-slate-200 flex-1"></div>
                                                     </div>
-                                                ) : <span className="text-gray-400 text-[10px] italic">Incoming only</span>
+                                                    <span className="text-xs font-semibold text-slate-700">{t.toWarehouse.name}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4 whitespace-nowrap text-center">
+                                                <div className="flex flex-col items-center">
+                                                    <span className="text-xs font-bold text-slate-900">{t.itemQuantity} items</span>
+                                                    {t.boxQuantity > 0 && <span className="text-[10px] text-slate-400">{t.boxQuantity} boxes</span>}
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold border uppercase tracking-wider ${t.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                                        t.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                            'bg-amber-50 text-amber-700 border-amber-200'
+                                                    }`}>
+                                                    {t.status}
+                                                </span>
+                                            </td>
+                                            {canApprove && (
+                                                <td className="px-5 py-4 whitespace-nowrap text-right">
+                                                    {t.status === 'PENDING' && (
+                                                        (user.role === 'SUPER_ADMIN' || (user.role === 'WAREHOUSE_ADMIN' && user.warehouseId === t.toWarehouseId)) ? (
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => processTransfer(t.id, 'approve')}
+                                                                    className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                                                                    title="Approve"
+                                                                >
+                                                                    <Check size={16} strokeWidth={2.5} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => processTransfer(t.id, 'reject')}
+                                                                    className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm"
+                                                                    title="Reject"
+                                                                >
+                                                                    <X size={16} strokeWidth={2.5} />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-end opacity-40">
+                                                                <span className="text-[10px] font-bold text-slate-400 italic">Incoming</span>
+                                                                <span className="text-[9px] text-slate-300">Wait for {t.toWarehouse.name}</span>
+                                                            </div>
+                                                        )
+                                                    )}
+                                                    {t.status !== 'PENDING' && (
+                                                        <span className="text-slate-300 italic text-[10px]">Processed</span>
+                                                    )}
+                                                </td>
                                             )}
-                                            {t.status !== 'PENDING' && <span className="text-gray-300">-</span>}
-                                        </td>
-                                    )}
-                                </tr>
-                            ))}
-                            {transfers.length === 0 && (
-                                <tr>
-                                    <td colSpan={canApprove ? 5 : 4} className="py-10 text-center text-gray-500 text-sm italic">
-                                        No stock transfers found.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

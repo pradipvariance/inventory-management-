@@ -23,6 +23,14 @@ export const getAllInventory = async (req, res) => {
             };
         }
 
+        if (req.query.category) {
+            // If product search exists, merge category filter into it
+            where.product = {
+                ...where.product,
+                category: req.query.category
+            };
+        }
+
         const [inventory, total] = await prisma.$transaction([
             prisma.inventory.findMany({
                 where,

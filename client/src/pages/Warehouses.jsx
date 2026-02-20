@@ -1,8 +1,10 @@
+
 import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Plus, Trash2, Edit } from 'lucide-react';
+import { Plus, Trash2, Search, MapPin, Package } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
+import Loader from '../components/Loader';
 
 const Warehouses = () => {
     const { user } = useContext(AuthContext);
@@ -11,8 +13,14 @@ const Warehouses = () => {
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({ name: '', location: '', capacity: 1000 });
 
+    // UI States
+    const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const itemsPerPage = 8;
+
     const fetchWarehouses = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
             const { data } = await axios.get('http://localhost:5000/api/warehouses', {
                 headers: { Authorization: `Bearer ${token}` }
@@ -28,6 +36,21 @@ const Warehouses = () => {
     useEffect(() => {
         fetchWarehouses();
     }, []);
+
+    // Client-side filtering and pagination
+    const filteredWarehouses = warehouses.filter(w =>
+        w.name.toLowerCase().includes(search.toLowerCase()) ||
+        w.location.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const totalPages = Math.ceil(filteredWarehouses.length / itemsPerPage);
+    const displayedWarehouses = filteredWarehouses.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+
+    // Smooth scroll to top when page changes
+    useEffect(() => {
+        const main = document.querySelector('main');
+        if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [page]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -62,116 +85,188 @@ const Warehouses = () => {
         }
     }
 
-    if (loading) return <div>Loading...</div>;
+    if (loading) return <Loader text="Loading Warehouses..." />;
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-800">Warehouses</h1>
-                {user?.role !== 'WAREHOUSE_ADMIN' && (
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
-                    >
-                        <Plus size={20} /> Add Warehouse
-                    </button>
+        <div className="min-h-screen bg-white animate-fade-in">
+            {/* Header */}
+            <div className="border-b border-indigo-100 bg-gradient-to-r from-indigo-50/80 via-white to-violet-50/50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Warehouses</h1>
+                            <p className="text-sm text-indigo-600 mt-0.5">Manage your storage locations.</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400" size={18} strokeWidth={2} />
+                                <input
+                                    type="text"
+                                    placeholder="Search warehouse..."
+                                    value={search}
+                                    onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                                    className="w-full sm:w-64 pl-10 pr-4 py-2.5 text-sm bg-white border border-indigo-100 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition-all"
+                                />
+                            </div>
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-md shadow-indigo-500/25"
+                            >
+                                <Plus size={20} strokeWidth={2} /> Add warehouse
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                    <div className="hide-scrollbar-x">
+                        <table className="min-w-full divide-y divide-slate-100">
+                            <thead className="bg-slate-50/50">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Capacity</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created At</th>
+                                    <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-slate-100">
+                                {displayedWarehouses.map((warehouse) => (
+                                    <tr key={warehouse.id} className="hover:bg-indigo-50/30 transition-colors">
+                                        <td className="px-6 py-3 whitespace-nowrap">
+                                            <Link to={`/warehouses/${warehouse.id}`} className="text-sm font-semibold text-slate-900 hover:text-indigo-600 transition-colors">
+                                                {warehouse.name}
+                                            </Link>
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5 text-slate-600">
+                                                <MapPin size={14} className="text-indigo-400" />
+                                                <span className="text-sm">{warehouse.location}</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap">
+                                            <div className="flex items-center gap-1.5 ">
+                                                <Package size={14} className="text-emerald-500" />
+                                                <span className="text-sm font-medium text-slate-700">{warehouse.capacity} units</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-sm text-slate-500">
+                                            {new Date(warehouse.createdAt).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-3 whitespace-nowrap text-right">
+                                            <button
+                                                onClick={() => handleDelete(warehouse.id)}
+                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                title="Delete warehouse"
+                                            >
+                                                <Trash2 size={18} strokeWidth={2} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                    {displayedWarehouses.length === 0 && !loading && (
+                        <div className="py-16 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+                                <Search size={28} className="text-indigo-500" />
+                            </div>
+                            <p className="text-slate-900 font-semibold">No warehouses found</p>
+                            <p className="text-sm text-slate-500 mt-1">Try a different search term or add a new warehouse.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex justify-between items-center mt-6 pt-6 border-t border-slate-100">
+                        <button
+                            disabled={page === 1}
+                            onClick={() => setPage(p => Math.max(1, p - 1))}
+                            className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <span className="text-sm text-slate-600">
+                            Page <span className="font-semibold text-indigo-600">{page}</span> of {totalPages}
+                        </span>
+                        <button
+                            disabled={page === totalPages}
+                            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                            className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            Next
+                        </button>
+                    </div>
                 )}
             </div>
 
-            <div className="bg-white shadow-md rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                            {user?.role !== 'WAREHOUSE_ADMIN' && (
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            )}
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {warehouses.map((warehouse) => (
-                            <tr key={warehouse.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    <Link to={`/warehouses/${warehouse.id}`} className="text-indigo-600 hover:text-indigo-900">
-                                        {warehouse.name}
-                                    </Link>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.location}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-gray-700">
-                                            {warehouse.usage ? `${warehouse.usage.used} / ${warehouse.usage.capacity}` : warehouse.capacity}
-                                        </span>
-                                        {warehouse.usage && (
-                                            <span className="text-xs text-green-600 font-medium">
-                                                {warehouse.usage.available} Available
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(warehouse.createdAt).toLocaleDateString()}</td>
-                                {user?.role !== 'WAREHOUSE_ADMIN' && (
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => handleDelete(warehouse.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
-                                    </td>
-                                )}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
+            {/* Add Warehouse Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">Add New Warehouse</h2>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700">Name</label>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md animate-scale-in border border-slate-200 relative">
+                        <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
+                            <Plus size={24} className="rotate-45" />
+                        </button>
+
+                        <div className="mb-6">
+                            <h2 className="text-xl font-bold text-slate-900">Add new warehouse</h2>
+                            <p className="text-slate-500 text-sm mt-0.5">Enter details to create a new location.</p>
+                        </div>
+
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Warehouse Name</label>
                                 <input
                                     type="text"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
                                     value={formData.name}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="e.g. Central Hub"
                                 />
                             </div>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700">Location</label>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Location</label>
                                 <input
                                     type="text"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
                                     value={formData.location}
                                     onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                    placeholder="e.g. New York, NY"
                                 />
                             </div>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700">Capacity</label>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Capacity</label>
                                 <input
                                     type="number"
                                     required
-                                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 border p-2"
+                                    min="0"
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
                                     value={formData.capacity}
                                     onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                                    placeholder="1000"
                                 />
                             </div>
-                            <div className="flex justify-end gap-2">
+
+                            <div className="flex justify-end gap-3 pt-4">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 border rounded-md hover:bg-gray-50"
+                                    className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/25"
                                 >
-                                    Create
+                                    Create warehouse
                                 </button>
                             </div>
                         </form>
