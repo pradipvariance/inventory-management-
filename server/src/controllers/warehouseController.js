@@ -40,7 +40,13 @@ export const getWarehouse = async (req, res) => {
     try {
         const warehouse = await prisma.warehouse.findUnique({
             where: { id: req.params.id },
-            include: { inventory: true },
+            include: {
+                inventory: {
+                    include: {
+                        product: true
+                    }
+                }
+            },
         });
         if (!warehouse) return res.status(404).json({ message: 'Warehouse not found' });
         res.json(warehouse);

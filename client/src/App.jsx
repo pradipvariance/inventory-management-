@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Warehouses from './pages/Warehouses';
+import WarehouseDetails from './pages/WarehouseDetails';
 import Products from './pages/Products';
 import Inventory from './pages/Inventory';
 import StockTransfers from './pages/StockTransfers';
@@ -34,6 +35,7 @@ function App() {
               <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
                 <Route element={<Layout />}>
                   <Route path="/warehouses" element={<Warehouses />} />
+                  <Route path="/warehouses/:id" element={<WarehouseDetails />} />
                   <Route path="/adjustments" element={<Adjustments />} />
                   <Route path="/transfers" element={<StockTransfers />} />
                 </Route>

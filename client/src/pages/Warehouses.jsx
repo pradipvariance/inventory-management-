@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Edit } from 'lucide-react';
 
@@ -87,7 +88,11 @@ const Warehouses = () => {
                     <tbody className="bg-white divide-y divide-gray-200">
                         {warehouses.map((warehouse) => (
                             <tr key={warehouse.id}>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{warehouse.name}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    <Link to={`/warehouses/${warehouse.id}`} className="text-indigo-600 hover:text-indigo-900">
+                                        {warehouse.name}
+                                    </Link>
+                                </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.location}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.capacity}</td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(warehouse.createdAt).toLocaleDateString()}</td>
