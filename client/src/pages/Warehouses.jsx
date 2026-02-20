@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Edit } from 'lucide-react';
+import AuthContext from '../context/AuthContext';
 
 const Warehouses = () => {
+    const { user } = useContext(AuthContext);
     const [warehouses, setWarehouses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -66,12 +68,14 @@ const Warehouses = () => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold text-gray-800">Warehouses</h1>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
-                >
-                    <Plus size={20} /> Add Warehouse
-                </button>
+                {user?.role !== 'WAREHOUSE_ADMIN' && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
+                    >
+                        <Plus size={20} /> Add Warehouse
+                    </button>
+                )}
             </div>
 
             <div className="bg-white shadow-md rounded-lg overflow-hidden">
@@ -82,7 +86,9 @@ const Warehouses = () => {
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            {user?.role !== 'WAREHOUSE_ADMIN' && (
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                            )}
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -94,11 +100,24 @@ const Warehouses = () => {
                                     </Link>
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.location}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{warehouse.capacity}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(warehouse.createdAt).toLocaleDateString()}</td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <button onClick={() => handleDelete(warehouse.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-gray-700">
+                                            {warehouse.usage ? `${warehouse.usage.used} / ${warehouse.usage.capacity}` : warehouse.capacity}
+                                        </span>
+                                        {warehouse.usage && (
+                                            <span className="text-xs text-green-600 font-medium">
+                                                {warehouse.usage.available} Available
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(warehouse.createdAt).toLocaleDateString()}</td>
+                                {user?.role !== 'WAREHOUSE_ADMIN' && (
+                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <button onClick={() => handleDelete(warehouse.id)} className="text-red-600 hover:text-red-900"><Trash2 size={18} /></button>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>

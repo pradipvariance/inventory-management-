@@ -2,6 +2,7 @@ import prisma from '../prisma.js';
 import { z } from 'zod';
 import csv from 'csv-parser';
 import fs from 'fs';
+import { checkWarehouseCapacity } from '../utils/inventoryUtils.js';
 
 const productSchema = z.object({
     name: z.string().min(2),
@@ -38,36 +39,50 @@ export const createProduct = async (req, res) => {
             return res.status(400).json({ message: 'Product with SKU or Barcode already exists' });
         }
 
-        const product = await prisma.product.create({ data });
+        const product = await prisma.$transaction(async (tx) => {
+            const product = await tx.product.create({ data });
 
-        // Create Inventory record if Warehouse is specified (either by Admin or Form)
-        let targetWarehouseId = null;
-        if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
-            targetWarehouseId = req.user.warehouseId;
-        } else if (req.body.warehouseId) {
-            targetWarehouseId = req.body.warehouseId;
-        }
+            // Create Inventory record if Warehouse is specified
+            let targetWarehouseId = null;
+            if (req.user.role === 'WAREHOUSE_ADMIN' && req.user.warehouseId) {
+                targetWarehouseId = req.user.warehouseId;
+            } else if (req.body.warehouseId) {
+                targetWarehouseId = req.body.warehouseId;
+            }
 
-        if (targetWarehouseId) {
-            const initialStock = req.body.initialStock ? parseInt(req.body.initialStock) : 0;
-            const initialBoxStock = req.body.boxQuantity ? parseInt(req.body.boxQuantity) : 0;
+            if (targetWarehouseId) {
+                const initialStock = req.body.initialStock ? parseInt(req.body.initialStock) : 0;
+                const initialBoxStock = req.body.boxQuantity ? parseInt(req.body.boxQuantity) : 0;
+                const boxSize = req.body.boxSize ? parseInt(req.body.boxSize) : 0;
 
-            let itemData = {
-                productId: product.id,
-                warehouseId: targetWarehouseId,
-                itemQuantity: initialStock,
-                boxQuantity: initialBoxStock
-            };
+                const totalNewItems = initialStock + (initialBoxStock * boxSize);
 
-            await prisma.inventory.create({
-                data: itemData
-            });
-        }
+                if (totalNewItems > 0) {
+                    await checkWarehouseCapacity(targetWarehouseId, totalNewItems);
+                }
+
+                await tx.inventory.create({
+                    data: {
+                        productId: product.id,
+                        warehouseId: targetWarehouseId,
+                        itemQuantity: initialStock,
+                        boxQuantity: initialBoxStock
+                    }
+                });
+            }
+            return product;
+        });
 
         res.status(201).json(product);
     } catch (error) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
         if (error instanceof z.ZodError) return res.status(400).json({ message: error.errors });
+
+        // Handle specific inventory error
+        if (error.message.includes('Warehouse capacity exceeded')) {
+            return res.status(400).json({ message: error.message });
+        }
+
         res.status(500).json({ message: error.message });
     }
 };
@@ -122,11 +137,13 @@ export const getProducts = async (req, res) => {
         }
         // --- STRICT WAREHOUSE FILTERING END ---
 
+        const isPaginationDisabled = limit === '0' || limit === 'all';
+
         const [productsData, total] = await prisma.$transaction([
             prisma.product.findMany({
                 where,
-                skip: parseInt(skip),
-                take: parseInt(limit),
+                skip: isPaginationDisabled ? undefined : parseInt(skip),
+                take: isPaginationDisabled ? undefined : parseInt(limit),
                 orderBy: { createdAt: 'desc' },
                 include: { inventory: true }
             }),

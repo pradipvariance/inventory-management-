@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ArrowLeft, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import AuthContext from '../context/AuthContext';
 
 const WarehouseDetails = () => {
+    const { user } = useContext(AuthContext);
     const { id } = useParams();
     const navigate = useNavigate();
     const [warehouse, setWarehouse] = useState(null);
@@ -84,8 +86,9 @@ const WarehouseDetails = () => {
                                 type="text"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
                                 required
+                                disabled={user?.role === 'WAREHOUSE_ADMIN'}
                             />
                         </div>
                         <div>
@@ -94,31 +97,50 @@ const WarehouseDetails = () => {
                                 type="text"
                                 value={formData.location}
                                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
                                 required
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                            <input
-                                type="number"
-                                value={formData.capacity}
-                                onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-                                required
+                                disabled={user?.role === 'WAREHOUSE_ADMIN'}
                             />
                         </div>
                     </div>
-                    <div className="mt-6 flex justify-end">
-                        <button
-                            type="submit"
-                            className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
-                        >
-                            <Save size={20} /> Update Warehouse
-                        </button>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                        <input
+                            type="number"
+                            value={formData.capacity}
+                            onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                            required
+                            disabled={user?.role === 'WAREHOUSE_ADMIN'}
+                        />
+                        {warehouse.usage && (
+                            <div className="mt-2 text-sm">
+                                <div className="flex justify-between text-gray-600 mb-1">
+                                    <span>Used: <strong>{warehouse.usage.used}</strong></span>
+                                    <span>Available: <strong className="text-green-600">{warehouse.usage.available}</strong></span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div
+                                        className={`h-2.5 rounded-full ${warehouse.usage.available === 0 ? 'bg-red-600' : 'bg-indigo-600'}`}
+                                        style={{ width: `${Math.min(100, (warehouse.usage.used / warehouse.usage.capacity) * 100)}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        )}
                     </div>
+
+                    {user?.role !== 'WAREHOUSE_ADMIN' && (
+                        <div className="mt-6 flex justify-end">
+                            <button
+                                type="submit"
+                                className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700"
+                            >
+                                <Save size={20} /> Update Warehouse
+                            </button>
+                        </div>
+                    )}
                 </form>
-            </div>
+            </div >
 
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-200">
@@ -187,7 +209,7 @@ const WarehouseDetails = () => {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     );
 };
 

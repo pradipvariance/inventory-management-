@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, Trash2, Edit, Search, Filter } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
@@ -79,6 +80,17 @@ const Products = () => {
         fetchProducts();
     }, [page, search]);
 
+    // Auto-calculate Box Quantity based on Initial Items and Units Per Box
+    useEffect(() => {
+        const units = parseInt(formData.boxSize);
+        const items = parseInt(formData.initialStock);
+
+        if (items && units > 0) {
+            const calculatedBoxes = Math.floor(items / units);
+            setFormData(prev => ({ ...prev, boxQuantity: calculatedBoxes }));
+        }
+    }, [formData.initialStock, formData.boxSize]);
+
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         setFormData({ ...formData, image: file });
@@ -104,7 +116,6 @@ const Products = () => {
 
             // New fields
             if (formData.warehouseId) data.append('warehouseId', formData.warehouseId);
-            if (formData.warehouseId) data.append('warehouseId', formData.warehouseId);
             if (formData.initialStock) data.append('initialStock', formData.initialStock);
             if (formData.boxQuantity) data.append('boxQuantity', formData.boxQuantity);
 
@@ -119,9 +130,17 @@ const Products = () => {
             setImagePreview(null);
             setShowModal(false);
             fetchProducts();
+            alert('Product created successfully');
         } catch (error) {
             console.error('Error creating product:', error);
-            alert(error.response?.data?.message || 'Error creating product');
+            const errorData = error.response?.data?.message;
+            if (Array.isArray(errorData)) {
+                // Formatting Zod errors
+                const formattedErrors = errorData.map(err => `${err.path.join('.')}: ${err.message}`).join('\n');
+                alert(`Validation Error:\n${formattedErrors}`);
+            } else {
+                alert(errorData || 'Error creating product');
+            }
         }
     };
 
@@ -204,7 +223,11 @@ const Products = () => {
                                             : <div className="h-12 w-12 bg-gray-100 rounded-lg flex items-center justify-center text-xs text-gray-400 font-medium">No Img</div>}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-bold text-gray-900">{product.name}</div>
+                                        <div className="text-sm font-bold text-gray-900">
+                                            <Link to={`/products/${product.id}`} className="hover:text-indigo-600 transition-colors">
+                                                {product.name}
+                                            </Link>
+                                        </div>
                                         <div className="text-xs text-gray-500 font-mono mt-0.5">SKU: {product.sku}</div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
@@ -338,12 +361,16 @@ const Products = () => {
                                 <input type="number" className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all" value={formData.minStockLevel} onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })} placeholder="10" />
                             </div>
 
-                            {formData.unitType === 'BOX' && (
-                                <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Items per Box</label>
-                                    <input type="number" className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all" value={formData.boxSize} onChange={(e) => setFormData({ ...formData, boxSize: e.target.value })} placeholder="e.g. 12" />
-                                </div>
-                            )}
+                            <div className="col-span-1 md:col-span-2">
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5 ml-1">Units Per Box</label>
+                                <input
+                                    type="number"
+                                    className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
+                                    value={formData.boxSize}
+                                    onChange={(e) => setFormData({ ...formData, boxSize: e.target.value })}
+                                    placeholder="e.g. 12 (Used for auto-calculation)"
+                                />
+                            </div>
 
                             {/* Initial Inventory Section */}
                             <div className="col-span-1 md:col-span-2 border-t border-gray-100 pt-6 mt-2">

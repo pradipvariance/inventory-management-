@@ -3,6 +3,8 @@ import axios from 'axios';
 import { ArrowRightLeft, Check, X } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 import Loader from '../components/Loader';
+import SearchableSelect from '../components/SearchableSelect';
+import SearchableCombobox from '../components/SearchableCombobox';
 
 const StockTransfers = () => {
     const [transfers, setTransfers] = useState([]);
@@ -15,7 +17,18 @@ const StockTransfers = () => {
     const [fromWarehouse, setFromWarehouse] = useState('');
     const [toWarehouse, setToWarehouse] = useState('');
     const [product, setProduct] = useState('');
-    const [itemQuantity, setItemQuantity] = useState(0);
+    const [unitsPerBox, setUnitsPerBox] = useState('');
+    const [itemQuantity, setItemQuantity] = useState(0);/* ... */
+
+    // Update unitsPerBox when product changes
+    useEffect(() => {
+        if (product) {
+            const selectedProduct = products.find(p => p.id === product);
+            if (selectedProduct) {
+                setUnitsPerBox(selectedProduct.boxSize || '');
+            }
+        }
+    }, [product, products]);
     const [boxQuantity, setBoxQuantity] = useState(0);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -27,7 +40,7 @@ const StockTransfers = () => {
 
             const [wRes, pRes, tRes] = await Promise.all([
                 axios.get('http://localhost:5000/api/warehouses', config),
-                axios.get('http://localhost:5000/api/products', config),
+                axios.get('http://localhost:5000/api/products?limit=0', config),
                 axios.get('http://localhost:5000/api/transfers', config)
             ]);
 
@@ -44,6 +57,15 @@ const StockTransfers = () => {
     useEffect(() => {
         fetchData();
     }, []);
+
+    // Auto-calculate Box Quantity based on Item Quantity and Units Per Box
+    useEffect(() => {
+        const units = parseInt(unitsPerBox);
+        if (itemQuantity && units > 0) {
+            const calculatedBoxes = Math.floor(parseInt(itemQuantity) / units);
+            setBoxQuantity(calculatedBoxes);
+        }
+    }, [itemQuantity, unitsPerBox]);
 
     const processTransfer = async (id, action) => {
         try {
@@ -106,28 +128,60 @@ const StockTransfers = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Product</label>
-                        <select required className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all" value={product} onChange={e => setProduct(e.target.value)}>
-                            <option value="">Select Product...</option>
-                            {products.map(p => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
-                        </select>
+                        <SearchableCombobox
+                            label="Product"
+                            placeholder="Select Product..."
+                            options={products.map(p => ({ value: p.id, label: p.name, subLabel: p.sku }))}
+                            value={product}
+                            onChange={(val) => setProduct(val)}
+                            required
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">From Warehouse</label>
-                            <select required className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all" value={fromWarehouse} onChange={e => setFromWarehouse(e.target.value)}>
+                            <select
+                                required
+                                className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all"
+                                value={fromWarehouse}
+                                onChange={e => {
+                                    setFromWarehouse(e.target.value);
+                                    if (e.target.value === toWarehouse) setToWarehouse('');
+                                }}
+                            >
                                 <option value="">Select Source...</option>
                                 {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">To Warehouse</label>
-                            <select required className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all" value={toWarehouse} onChange={e => setToWarehouse(e.target.value)}>
+                            <select
+                                required
+                                className={`block w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-semibold text-gray-900 transition-all ${!fromWarehouse ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-50'}`}
+                                value={toWarehouse}
+                                onChange={e => setToWarehouse(e.target.value)}
+                                disabled={!fromWarehouse}
+                            >
                                 <option value="">Select Destination...</option>
-                                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                {warehouses
+                                    .filter(w => w.id !== fromWarehouse)
+                                    .map(w => <option key={w.id} value={w.id}>{w.name}</option>)
+                                }
                             </select>
                         </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Units Per Box (for calculation)</label>
+                        <input
+                            type="number"
+                            min="1"
+                            className="block w-full px-3 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-bold text-gray-900 transition-all"
+                            value={unitsPerBox}
+                            onChange={e => setUnitsPerBox(e.target.value)}
+                            placeholder="Enter units per box if missing"
+                        />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -185,8 +239,8 @@ const StockTransfers = () => {
                                     </td>
                                     <td className="px-3 py-3 text-center">
                                         <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-bold border uppercase tracking-wide ${t.status === 'COMPLETED' ? 'bg-green-50 text-green-700 border-green-200' :
-                                                t.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                    'bg-amber-50 text-amber-700 border-amber-200'
+                                            t.status === 'REJECTED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                'bg-amber-50 text-amber-700 border-amber-200'
                                             }`}>
                                             {t.status}
                                         </span>

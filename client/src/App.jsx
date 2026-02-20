@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import Warehouses from './pages/Warehouses';
 import WarehouseDetails from './pages/WarehouseDetails';
 import Products from './pages/Products';
+import ProductDetails from './pages/ProductDetails';
 import Inventory from './pages/Inventory';
 import StockTransfers from './pages/StockTransfers';
 import Adjustments from './pages/Adjustments';
@@ -34,10 +35,16 @@ function App() {
               {/* Super Admin Restricted Routes */}
               <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN']} />}>
                 <Route element={<Layout />}>
-                  <Route path="/warehouses" element={<Warehouses />} />
-                  <Route path="/warehouses/:id" element={<WarehouseDetails />} />
                   <Route path="/adjustments" element={<Adjustments />} />
                   <Route path="/transfers" element={<StockTransfers />} />
+                </Route>
+              </Route>
+
+              {/* Warehouse Routes - Super Admin & Warehouse Admin */}
+              <Route element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'WAREHOUSE_ADMIN']} />}>
+                <Route element={<Layout />}>
+                  <Route path="/warehouses" element={<Warehouses />} />
+                  <Route path="/warehouses/:id" element={<WarehouseDetails />} />
                 </Route>
               </Route>
 
@@ -53,6 +60,7 @@ function App() {
                 <Route element={<Layout />}>
                   <Route path="/" element={<Dashboard />} />
                   <Route path="/products" element={<Products />} />
+                  <Route path="/products/:id" element={<ProductDetails />} />
                   <Route path="/inventory" element={<Inventory />} />
                 </Route>
               </Route>

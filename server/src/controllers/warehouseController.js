@@ -1,5 +1,6 @@
 import prisma from '../prisma.js';
 import { z } from 'zod';
+import { calculateWarehouseUsage } from '../utils/inventoryUtils.js';
 
 const warehouseSchema = z.object({
     name: z.string().min(2),
@@ -27,10 +28,16 @@ export const getWarehouses = async (req, res) => {
         const warehouses = await prisma.warehouse.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
-                inventory: true,
+                inventory: { include: { product: true } },
             }
         });
-        res.json(warehouses);
+
+        const failedWarehouses = warehouses.map(w => ({
+            ...w,
+            usage: calculateWarehouseUsage(w)
+        }));
+
+        res.json(failedWarehouses);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -49,7 +56,13 @@ export const getWarehouse = async (req, res) => {
             },
         });
         if (!warehouse) return res.status(404).json({ message: 'Warehouse not found' });
-        res.json(warehouse);
+
+        const warehouseWithUsage = {
+            ...warehouse,
+            usage: calculateWarehouseUsage(warehouse)
+        };
+
+        res.json(warehouseWithUsage);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

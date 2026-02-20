@@ -1,9 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Search } from 'lucide-react';
 import Loader from '../components/Loader';
+import AuthContext from '../context/AuthContext';
 
 const Inventory = () => {
+    const { user } = useContext(AuthContext);
     const [inventory, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -69,9 +72,21 @@ const Inventory = () => {
                         <tbody className="bg-white divide-y divide-gray-50">
                             {inventory.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/80 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.product?.name || 'Unknown Product'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                                        <Link to={`/products/${item.product?.id}`} className="hover:text-indigo-600 transition-colors">
+                                            {item.product?.name || 'Unknown Product'}
+                                        </Link>
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">{item.product?.sku || 'N/A'}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.warehouse?.name || 'Unknown Warehouse'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                                        {user?.role === 'SUPER_ADMIN' || user?.role === 'WAREHOUSE_ADMIN' ? (
+                                            <Link to={`/warehouses/${item.warehouse?.id}`} className="hover:text-indigo-600 transition-colors">
+                                                {item.warehouse?.name || 'Unknown Warehouse'}
+                                            </Link>
+                                        ) : (
+                                            <span>{item.warehouse?.name || 'Unknown Warehouse'}</span>
+                                        )}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
                                         <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg font-bold">
                                             {item.itemQuantity}

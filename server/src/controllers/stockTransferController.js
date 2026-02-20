@@ -1,6 +1,7 @@
 import prisma from '../prisma.js';
 import { z } from 'zod';
 import { getIO } from '../socket.js';
+import { checkWarehouseCapacity } from '../utils/inventoryUtils.js';
 
 const transferSchema = z.object({
     productId: z.string().uuid(),
@@ -113,6 +114,14 @@ export const approveTransfer = async (req, res) => {
             } catch (err) {
                 console.log('Socket emit failed', err);
             }
+
+            // 1.5 Check Destination Capacity
+            // Need product details to know boxSize
+            const product = await prisma.product.findUnique({ where: { id: transfer.productId } });
+            const boxSize = product.boxSize || 0;
+            const totalTransferItems = transfer.itemQuantity + (transfer.boxQuantity * boxSize);
+
+            await checkWarehouseCapacity(transfer.toWarehouseId, totalTransferItems);
 
             // 2. Add to Destination
             await prisma.inventory.upsert({

@@ -1,7 +1,9 @@
 import { useState, useEffect, useContext } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Plus, FileText, CheckCircle, Truck, XCircle } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
+import SearchableSelect from '../components/SearchableSelect';
 
 const PurchaseOrders = () => {
     const [pos, setPOs] = useState([]);
@@ -29,7 +31,7 @@ const PurchaseOrders = () => {
                 // But for simplicity, we fetch mostly everything. 
                 axios.get('http://localhost:5000/api/suppliers', config).catch(() => ({ data: [] })),
                 axios.get('http://localhost:5000/api/warehouses', config).catch(() => ({ data: [] })),
-                axios.get('http://localhost:5000/api/products', config).catch(() => ({ data: { products: [] } }))
+                axios.get('http://localhost:5000/api/products?limit=0', config).catch(() => ({ data: { products: [] } }))
             ]);
 
             setPOs(Array.isArray(poRes.data) ? poRes.data : []);
@@ -149,17 +151,23 @@ const PurchaseOrders = () => {
                                     {po.supplier?.name || 'Unknown'}
                                 </td>
                                 <td className="px-4 py-2 text-gray-900 truncate max-w-[140px]" title={po.warehouse?.name}>
-                                    {po.warehouse?.name || 'N/A'}
+                                    {user?.role === 'SUPER_ADMIN' || user?.role === 'WAREHOUSE_ADMIN' ? (
+                                        <Link to={`/warehouses/${po.warehouse?.id}`} className="hover:text-indigo-600 transition-colors">
+                                            {po.warehouse?.name || 'N/A'}
+                                        </Link>
+                                    ) : (
+                                        <span>{po.warehouse?.name || 'N/A'}</span>
+                                    )}
                                 </td>
                                 <td className={`px-4 py-2 font-medium whitespace-nowrap ${new Date(po.deliveryDate) < new Date() && po.status !== 'RECEIVED' ? 'text-red-500' : 'text-gray-700'}`}>
                                     {po.deliveryDate ? new Date(po.deliveryDate).toLocaleDateString() : '-'}
                                 </td>
                                 <td className="px-4 py-2 text-center">
                                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wide ${po.status === 'RECEIVED' ? 'bg-green-50 text-green-700 border-green-200' :
-                                            po.status === 'DELIVERED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                                                po.status === 'CONFIRMED' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                    po.status === 'CANCELLED' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                        'bg-amber-50 text-amber-700 border-amber-200'
+                                        po.status === 'DELIVERED' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                            po.status === 'CONFIRMED' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                po.status === 'CANCELLED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                    'bg-amber-50 text-amber-700 border-amber-200'
                                         }`}>
                                         {po.status}
                                     </span>
