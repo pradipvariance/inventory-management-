@@ -128,7 +128,7 @@ const Warehouses = () => {
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Location</th>
-                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Capacity</th>
+                                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Capacity (Avail/Total)</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created At</th>
                                     <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                                 </tr>
@@ -148,9 +148,19 @@ const Warehouses = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-3 whitespace-nowrap">
-                                            <div className="flex items-center gap-1.5 ">
-                                                <Package size={14} className="text-emerald-500" />
-                                                <span className="text-sm font-medium text-slate-700">{warehouse.capacity} units</span>
+                                            <div className="flex flex-col gap-1.5 min-w-[140px]">
+                                                <div className="flex justify-between text-xs font-medium">
+                                                    <span className="text-indigo-600 font-semibold">{warehouse.usage?.available} avail</span>
+                                                    <span className="text-slate-400">/ {warehouse.usage?.capacity}</span>
+                                                </div>
+                                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full rounded-full transition-all duration-500 ${(warehouse.usage?.used / warehouse.usage?.capacity) > 0.9 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' :
+                                                                (warehouse.usage?.used / warehouse.usage?.capacity) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                                                            }`}
+                                                        style={{ width: `${Math.min(100, (warehouse.usage?.used / warehouse.usage?.capacity) * 100)}%` }}
+                                                    ></div>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-3 whitespace-nowrap text-sm text-slate-500">

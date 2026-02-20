@@ -94,7 +94,7 @@ export const getDashboardStats = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Dashboard Stats Error:", error);
+        console.error("Dashboard Stats Error:", error.message || error);
         // Ensure we send a JSON response even on error to prevent frontend crashes
         res.status(500).json({
             message: error.message,
@@ -171,7 +171,7 @@ export const getSalesChart = async (req, res) => {
         res.json(chartData);
 
     } catch (error) {
-        console.error("ERROR in getSalesChart:", error);
+        console.error("ERROR in getSalesChart:", error.message || error);
         res.status(500).json({ message: error.message, data: [] });
     }
 };
@@ -213,7 +213,7 @@ export const getLowStockItems = async (req, res) => {
 
         res.json(lowStockItems);
     } catch (error) {
-        console.error("Error fetching low stock items:", error);
+        console.error("Error fetching low stock items:", error.message || error);
         res.status(500).json({ message: error.message });
     }
 };

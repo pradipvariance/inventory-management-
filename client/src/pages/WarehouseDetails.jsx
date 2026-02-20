@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Save, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Save, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import AuthContext from '../context/AuthContext';
 
 const WarehouseDetails = () => {
@@ -19,6 +19,11 @@ const WarehouseDetails = () => {
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
+
+    // Adjustment Modal State
+    const [showAdjustModal, setShowAdjustModal] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [adjData, setAdjData] = useState({ type: 'DELETE_SPECIFIC', quantity: '', reason: '' });
 
     useEffect(() => {
         const fetchWarehouse = async () => {
@@ -60,6 +65,31 @@ const WarehouseDetails = () => {
         } catch (error) {
             console.error('Error updating warehouse:', error);
             alert(error.response?.data?.message || 'Error updating warehouse');
+        }
+    };
+
+    const handleAdjustment = async (e) => {
+        e.preventDefault();
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post('http://localhost:5000/api/inventory/adjust', {
+                productId: selectedItem.productId,
+                warehouseId: id,
+                ...adjData
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setShowAdjustModal(false);
+            setAdjData({ type: 'DELETE_SPECIFIC', quantity: '', reason: '' });
+            // Refresh warehouse data
+            const { data } = await axios.get(`http://localhost:5000/api/warehouses/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setWarehouse(data);
+            alert('Inventory adjusted successfully');
+        } catch (error) {
+            console.error('Error adjusting inventory:', error);
+            alert(error.response?.data?.message || 'Error adjusting inventory');
         }
     };
 
@@ -154,6 +184,9 @@ const WarehouseDetails = () => {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Updated</th>
+                                {user?.role === 'SUPER_ADMIN' && (
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                )}
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
@@ -168,10 +201,30 @@ const WarehouseDetails = () => {
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {item.product?.sku || 'N/A'}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.itemQuantity}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                {item.itemQuantity + (item.boxQuantity * (item.product?.boxSize || 0))}
+                                                {item.boxQuantity > 0 && (
+                                                    <span className="ml-2 text-xs text-slate-400 font-normal">
+                                                        ({item.itemQuantity} L, {item.boxQuantity} B)
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {new Date(item.updatedAt).toLocaleDateString()}
                                             </td>
+                                            {user?.role === 'SUPER_ADMIN' && (
+                                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedItem(item);
+                                                            setShowAdjustModal(true);
+                                                        }}
+                                                        className="text-indigo-600 hover:text-indigo-900"
+                                                    >
+                                                        Adjust
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))
                             ) : (
@@ -209,7 +262,81 @@ const WarehouseDetails = () => {
                     </div>
                 )}
             </div>
-        </div >
+
+            {/* Adjustment Modal */}
+            {showAdjustModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md animate-scale-in border border-slate-200 relative">
+                        <button onClick={() => setShowAdjustModal(false)} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                            <Plus size={24} className="rotate-45" />
+                        </button>
+
+                        <div className="mb-6">
+                            <h2 className="text-xl font-bold text-slate-900">Adjust Inventory</h2>
+                            <p className="text-slate-500 text-sm mt-0.5">{selectedItem?.product?.name}</p>
+                        </div>
+
+                        <form onSubmit={handleAdjustment} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Adjustment Type</label>
+                                <select
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
+                                    value={adjData.type}
+                                    onChange={(e) => setAdjData({ ...adjData, type: e.target.value })}
+                                >
+                                    <option value="DELETE_SPECIFIC">Remove Specific Quantity</option>
+                                    <option value="DELETE_ALL">Remove All Stock</option>
+                                </select>
+                            </div>
+
+                            {adjData.type === 'DELETE_SPECIFIC' && (
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Quantity to Remove</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="1"
+                                        max={selectedItem?.itemQuantity + (selectedItem?.boxQuantity * (selectedItem?.product?.boxSize || 0))}
+                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
+                                        value={adjData.quantity}
+                                        onChange={(e) => setAdjData({ ...adjData, quantity: e.target.value })}
+                                        placeholder={`Max: ${selectedItem?.itemQuantity + (selectedItem?.boxQuantity * (selectedItem?.product?.boxSize || 0))}`}
+                                    />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Reason</label>
+                                <textarea
+                                    required
+                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
+                                    value={adjData.reason}
+                                    onChange={(e) => setAdjData({ ...adjData, reason: e.target.value })}
+                                    placeholder="e.g. Damaged items, Inventory audit"
+                                    rows="3"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAdjustModal(false)}
+                                    className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-6 py-3 bg-rose-600 text-white rounded-xl font-semibold hover:bg-rose-700 transition-colors shadow-md shadow-rose-500/25"
+                                >
+                                    Confirm Adjustment
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 

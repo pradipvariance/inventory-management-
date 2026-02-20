@@ -55,3 +55,79 @@ export const getAllInventory = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+export const adjustInventory = async (req, res) => {
+    const { productId, warehouseId, type, quantity, reason } = req.body;
+
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Get current inventory
+            const inventory = await tx.inventory.findUnique({
+                where: { productId_warehouseId: { productId, warehouseId } },
+                include: { product: true }
+            });
+
+            if (!inventory) throw new Error('Inventory record not found');
+
+            const boxSize = inventory.product.boxSize || 1;
+            const currentTotalUnits = inventory.itemQuantity + (inventory.boxQuantity * boxSize);
+
+            let unitsToRemove = 0;
+            let itemsRemovedForNote = 0;
+            let boxesRemovedForNote = 0;
+
+            if (type === 'DELETE_ALL') {
+                unitsToRemove = currentTotalUnits;
+                itemsRemovedForNote = inventory.itemQuantity;
+                boxesRemovedForNote = inventory.boxQuantity;
+            } else if (type === 'DELETE_SPECIFIC') {
+                unitsToRemove = parseInt(quantity);
+                if (isNaN(unitsToRemove) || unitsToRemove <= 0) {
+                    throw new Error('Invalid quantity');
+                }
+                if (unitsToRemove > currentTotalUnits) {
+                    throw new Error('Cannot remove more than available quantity');
+                }
+                // For simplicity in the report, we record the total requested units
+                itemsRemovedForNote = unitsToRemove;
+                boxesRemovedForNote = 0;
+            } else {
+                throw new Error('Invalid adjustment type');
+            }
+
+            // 2. Calculate New State
+            const newTotalUnits = currentTotalUnits - unitsToRemove;
+            const newBoxQuantity = Math.floor(newTotalUnits / boxSize);
+            const newItemQuantity = newTotalUnits % boxSize;
+
+            // 3. Update Inventory
+            const updatedInventory = await tx.inventory.update({
+                where: { id: inventory.id },
+                data: {
+                    itemQuantity: newItemQuantity,
+                    boxQuantity: newBoxQuantity
+                }
+            });
+
+            // 4. Create CreditDebitNote
+            await tx.creditDebitNote.create({
+                data: {
+                    type: 'DEBIT',
+                    amount: inventory.product.amount.mul(unitsToRemove), // Accurate financial value
+                    reason: reason || 'Manual adjustment by Super Admin',
+                    productId,
+                    warehouseId,
+                    itemQuantity: itemsRemovedForNote,
+                    boxQuantity: boxesRemovedForNote
+                }
+            });
+
+            return updatedInventory;
+        });
+
+        res.json({ message: 'Inventory adjusted successfully', inventory: result });
+    } catch (error) {
+        console.error("Adjust Inventory Error:", error.message || error);
+        res.status(400).json({ message: error.message });
+    }
+};

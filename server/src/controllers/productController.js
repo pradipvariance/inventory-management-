@@ -173,7 +173,7 @@ export const getProducts = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("getProducts Error:", error);
+        console.error("getProducts Error:", error.message || error);
         res.status(500).json({ message: error.message });
     }
 };

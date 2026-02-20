@@ -36,7 +36,19 @@ const Products = () => {
 
     useEffect(() => {
         const fetchWarehouses = async () => {
-            // ... existing warehouse fetch logic ...
+            try {
+                const token = localStorage.getItem('token');
+                const { data } = await axios.get('http://localhost:5000/api/warehouses', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setWarehouses(data);
+                // Set default warehouse if available
+                if (data.length > 0 && !formData.warehouseId) {
+                    setFormData(prev => ({ ...prev, warehouseId: data[0].id }));
+                }
+            } catch (error) {
+                console.error('Error fetching warehouses:', error);
+            }
         };
 
         const fetchCategories = async () => {
@@ -51,9 +63,9 @@ const Products = () => {
             }
         }
 
-        if (user?.role !== 'WAREHOUSE_ADMIN') fetchWarehouses();
+        fetchWarehouses();
         fetchCategories();
-    }, [user]);
+    }, []);
 
     const fetchProducts = async () => {
         try {
@@ -103,9 +115,11 @@ const Products = () => {
         const units = parseInt(formData.boxSize);
         const items = parseInt(formData.initialStock);
 
-        if (items && units > 0) {
+        if (units > 0 && !isNaN(items)) {
             const calculatedBoxes = Math.floor(items / units);
             setFormData(prev => ({ ...prev, boxQuantity: calculatedBoxes }));
+        } else if (isNaN(items) || units <= 0) {
+            setFormData(prev => ({ ...prev, boxQuantity: '' }));
         }
     }, [formData.initialStock, formData.boxSize]);
 
@@ -240,7 +254,7 @@ const Products = () => {
                                     </div>
                                 )}
                             </div>
-                            {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                            {user?.role !== 'WAREHOUSE_ADMIN' && (
                                 <button
                                     onClick={() => setShowModal(true)}
                                     className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 whitespace-nowrap shadow-md shadow-indigo-500/25"
@@ -265,7 +279,7 @@ const Products = () => {
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Category</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Price</th>
                                     <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Unit</th>
-                                    {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                                    {user?.role !== 'WAREHOUSE_ADMIN' && (
                                         <th className="px-6 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                                     )}
                                 </tr>
@@ -297,7 +311,7 @@ const Products = () => {
                                                 {product.unitType}
                                             </span>
                                         </td>
-                                        {user?.role !== 'WAREHOUSE_ADMIN' && user?.role !== 'SUPER_ADMIN' && (
+                                        {user?.role !== 'WAREHOUSE_ADMIN' && (
                                             <td className="px-6 py-3 whitespace-nowrap text-right">
                                                 <button onClick={() => handleDelete(product.id)} className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Delete product">
                                                     <Trash2 size={18} strokeWidth={2} />
@@ -396,12 +410,11 @@ const Products = () => {
                                 <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Min. stock level</label>
                                 <input type="number" className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900" value={formData.minStockLevel} onChange={(e) => setFormData({ ...formData, minStockLevel: e.target.value })} placeholder="10" />
                             </div>
-                            {formData.unitType === 'BOX' && (
-                                <div className="col-span-1 md:col-span-2">
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Items per box</label>
-                                    <input type="number" className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900" value={formData.boxSize} onChange={(e) => setFormData({ ...formData, boxSize: e.target.value })} placeholder="e.g. 12" />
-                                </div>
-                            )}
+                            <div className="col-span-1 md:col-span-2">
+                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Items per box</label>
+                                <input type="number" required className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900" value={formData.boxSize} onChange={(e) => setFormData({ ...formData, boxSize: e.target.value })} placeholder="e.g. 12" />
+                                <p className="text-[10px] text-slate-400 mt-1">Used to auto-calculate initial boxes and handle box-sized inventory.</p>
+                            </div>
                             <div className="col-span-1 md:col-span-2 border-t border-slate-200 pt-6 mt-2">
                                 <h3 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
                                     <span className="w-1 h-4 bg-indigo-500 rounded-full" />

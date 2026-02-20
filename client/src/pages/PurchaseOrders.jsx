@@ -65,6 +65,15 @@ const PurchaseOrders = () => {
     const handleItemChange = (index, field, value) => {
         const newItems = [...poItems];
         newItems[index][field] = value;
+
+        // Auto-populate price when product is selected
+        if (field === 'productId') {
+            const product = products.find(p => p.id === value);
+            if (product) {
+                newItems[index].unitCost = product.amount;
+            }
+        }
+
         setPoItems(newItems);
     };
 
