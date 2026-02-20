@@ -7,7 +7,8 @@ import {
     updateProduct,
     deleteProduct,
     bulkImportProducts,
-    debugInventory
+    debugInventory,
+    getCategories
 } from '../controllers/productController.js';
 import { protect, authorize } from '../middleware/authMiddleware.js';
 
@@ -27,6 +28,8 @@ router.get('/debug', debugInventory);
 router.route('/')
     .post(protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER', 'WAREHOUSE_ADMIN'), upload.single('image'), createProduct)
     .get(protect, getProducts);
+
+router.get('/categories', protect, getCategories);
 
 router.post('/import', protect, authorize('SUPER_ADMIN', 'INVENTORY_MANAGER'), upload.single('file'), bulkImportProducts);
 

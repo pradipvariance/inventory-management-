@@ -29,7 +29,7 @@ const Cart = () => {
             });
 
             clearCart();
-            toast.success('Order placed successfully!', { id: toastId });
+            toast.success('Order placed successfully.', { id: toastId });
             navigate('/orders');
         } catch (error) {
             console.error('Checkout failed:', error);
@@ -41,123 +41,122 @@ const Cart = () => {
 
     if (cart.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
-                <div className="bg-indigo-50 p-8 rounded-full mb-6">
-                    <CartIcon size={64} className="text-indigo-200" />
+            <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 animate-fade-in bg-gradient-to-b from-indigo-50/30 to-white">
+                <div className="w-20 h-20 rounded-2xl bg-indigo-100 flex items-center justify-center mb-6">
+                    <CartIcon size={40} className="text-indigo-500" strokeWidth={1.5} />
                 </div>
-                <h2 className="text-3xl font-extrabold text-gray-900 mb-3">Your cart is empty</h2>
-                <p className="text-gray-500 mb-8 max-w-md text-center">Looks like you haven't added anything to your cart yet. Browse our products to find something you'll love.</p>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">Your cart is empty</h2>
+                <p className="text-slate-500 text-sm text-center max-w-sm mb-8">
+                    Add items from the shop to see them here and proceed to checkout.
+                </p>
                 <button
                     onClick={() => navigate('/shop')}
-                    className="bg-indigo-600 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 hover:-translate-y-1"
+                    className="px-6 py-3 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/25"
                 >
-                    Start Shopping
+                    Go to Shop
                 </button>
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto animate-fade-in">
-            <h1 className="text-3xl font-extrabold mb-8 text-gray-900">Shopping Cart</h1>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 animate-fade-in bg-white">
+            <div className="mb-8 pb-4 border-b border-indigo-100">
+                <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Shopping cart</h1>
+                <p className="text-sm text-indigo-600 mt-0.5">{cart.length} {cart.length === 1 ? 'item' : 'items'}</p>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Cart Items List */}
                 <div className="lg:col-span-2 space-y-4">
-                    {cart.map((item, index) => (
+                    {cart.map((item) => (
                         <div
                             key={item.id}
-                            className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex gap-4 items-center group transition-all hover:shadow-md"
-                            style={{ animationDelay: `${index * 50}ms` }}
+                            className="bg-white rounded-2xl border border-slate-200 p-4 flex gap-4 items-center hover:border-indigo-200 hover:shadow-md hover:shadow-indigo-500/5 transition-all"
                         >
-                            {/* Product Image */}
-                            <div className="h-24 w-24 bg-gray-50 rounded-xl overflow-hidden shrink-0 border border-gray-200">
+                            <div className="h-20 w-20 rounded-xl bg-indigo-50 border border-indigo-100 overflow-hidden shrink-0">
                                 {item.image ? (
                                     <img src={`/${item.image}`} alt={item.name} className="h-full w-full object-cover" />
                                 ) : (
-                                    <div className="h-full w-full flex items-center justify-center text-gray-400">
-                                        <CartIcon size={24} />
+                                    <div className="h-full w-full flex items-center justify-center text-indigo-300">
+                                        <CartIcon size={24} strokeWidth={1.5} />
                                     </div>
                                 )}
                             </div>
 
-                            {/* Details */}
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-gray-900 truncate">{item.name}</h3>
-                                <p className="text-sm text-gray-500 mb-2">{item.sku}</p>
-                                <div className="font-bold text-indigo-600">${item.price}</div>
+                                <h3 className="font-semibold text-slate-900 truncate">{item.name}</h3>
+                                {item.sku && <p className="text-xs text-slate-500 mt-0.5">{item.sku}</p>}
+                                <p className="text-sm font-semibold text-indigo-600 mt-1">${typeof item.price === 'number' ? item.price.toFixed(2) : item.price}</p>
                             </div>
 
-                            {/* Quantity Controls - Desktop/Tablet */}
-                            <div className="flex flex-col items-end gap-3">
-                                <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+                            <div className="flex flex-col items-end gap-2">
+                                <div className="flex items-center gap-1 bg-indigo-50 rounded-lg p-1 border border-indigo-100">
                                     <button
                                         onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
-                                        className="p-1 hover:bg-white rounded-md transition-colors text-gray-600"
+                                        className="p-1.5 rounded-md hover:bg-indigo-100 text-indigo-700 transition-colors disabled:opacity-50"
                                         disabled={item.quantity <= 1}
+                                        aria-label="Decrease quantity"
                                     >
-                                        <Minus size={16} />
+                                        <Minus size={16} strokeWidth={2} />
                                     </button>
-                                    <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
+                                    <span className="text-sm font-semibold text-slate-900 w-6 text-center">{item.quantity}</span>
                                     <button
                                         onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                        className="p-1 hover:bg-white rounded-md transition-colors text-gray-600"
+                                        className="p-1.5 rounded-md hover:bg-indigo-100 text-indigo-700 transition-colors"
+                                        aria-label="Increase quantity"
                                     >
-                                        <Plus size={16} />
+                                        <Plus size={16} strokeWidth={2} />
                                     </button>
                                 </div>
                                 <button
                                     onClick={() => removeFromCart(item.id)}
-                                    className="text-red-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                     title="Remove item"
+                                    aria-label="Remove item"
                                 >
-                                    <Trash2 size={18} />
+                                    <Trash2 size={18} strokeWidth={2} />
                                 </button>
                             </div>
                         </div>
                     ))}
                 </div>
 
-                {/* Order Summary */}
                 <div className="lg:col-span-1">
-                    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
-                        <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
+                    <div className="bg-white rounded-2xl border border-indigo-100 p-6 sticky top-24 shadow-lg shadow-indigo-500/5">
+                        <h2 className="text-lg font-bold text-slate-900 mb-5">Order summary</h2>
 
                         <div className="space-y-3 mb-6">
-                            <div className="flex justify-between text-gray-600">
+                            <div className="flex justify-between text-sm text-slate-600">
                                 <span>Subtotal</span>
-                                <span>${total.toFixed(2)}</span>
+                                <span className="font-medium text-slate-900">${total.toFixed(2)}</span>
                             </div>
-                            <div className="flex justify-between text-gray-600">
+                            <div className="flex justify-between text-sm text-slate-600">
                                 <span>Shipping</span>
-                                <span className="text-green-600 font-medium">Free</span>
+                                <span className="text-slate-500">Calculated at checkout</span>
                             </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>Tax</span>
-                                <span>$0.00</span>
-                            </div>
-                            <div className="border-t border-gray-100 pt-3 flex justify-between items-center text-lg font-bold text-gray-900">
-                                <span>Total</span>
-                                <span>${total.toFixed(2)}</span>
+                            <div className="border-t border-indigo-100 pt-4 flex justify-between items-center">
+                                <span className="font-semibold text-slate-900">Total</span>
+                                <span className="text-lg font-bold text-indigo-600">${total.toFixed(2)}</span>
                             </div>
                         </div>
 
                         <button
                             onClick={handleCheckout}
                             disabled={loading}
-                            className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 group disabled:opacity-70 disabled:cursor-not-allowed"
+                            className="w-full py-3.5 px-4 bg-indigo-600 text-white text-sm font-semibold rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed shadow-md shadow-indigo-500/25"
                         >
                             {loading ? (
-                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                <span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
                             ) : (
                                 <>
-                                    Checkout <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    Checkout
+                                    <ArrowRight size={18} strokeWidth={2} />
                                 </>
                             )}
                         </button>
 
-                        <p className="text-xs text-center text-gray-400 mt-4">
-                            Secure checkout powered by Stripe (Mock)
+                        <p className="text-xs text-slate-400 text-center mt-4">
+                            Secure checkout
                         </p>
                     </div>
                 </div>

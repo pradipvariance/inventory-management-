@@ -190,14 +190,12 @@ export const getLowStockItems = async (req, res) => {
                 JOIN "Product" p ON i."productId" = p.id
                 WHERE i."itemQuantity" <= p."minStockLevel"
                 AND i."warehouseId" = ${warehouseId}
-                LIMIT 5
             `;
         } else {
             lowStockIds = await prisma.$queryRaw`
                 SELECT i.id FROM "Inventory" i
                 JOIN "Product" p ON i."productId" = p.id
                 WHERE i."itemQuantity" <= p."minStockLevel"
-                LIMIT 5
             `;
         }
 
