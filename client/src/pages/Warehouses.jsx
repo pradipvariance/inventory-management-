@@ -156,7 +156,7 @@ const Warehouses = () => {
                                                 <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                                                     <div
                                                         className={`h-full rounded-full transition-all duration-500 ${(warehouse.usage?.used / warehouse.usage?.capacity) > 0.9 ? 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.4)]' :
-                                                                (warehouse.usage?.used / warehouse.usage?.capacity) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                                                            (warehouse.usage?.used / warehouse.usage?.capacity) > 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
                                                             }`}
                                                         style={{ width: `${Math.min(100, (warehouse.usage?.used / warehouse.usage?.capacity) * 100)}%` }}
                                                     ></div>
@@ -217,68 +217,86 @@ const Warehouses = () => {
 
             {/* Add Warehouse Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md animate-scale-in border border-slate-200 relative">
-                        <button onClick={() => setShowModal(false)} className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors" aria-label="Close">
-                            <Plus size={24} className="rotate-45" />
-                        </button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg animate-scale-in border border-slate-200 overflow-hidden flex flex-col">
 
-                        <div className="mb-6">
-                            <h2 className="text-xl font-bold text-slate-900">Add new warehouse</h2>
-                            <p className="text-slate-500 text-sm mt-0.5">Enter details to create a new location.</p>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-7 py-4 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0">
+                                    <MapPin size={18} strokeWidth={2} />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-white">Add New Warehouse</h2>
+                                    <p className="text-indigo-200 text-xs mt-0.5">Enter details to create a new storage location.</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors" aria-label="Close">
+                                <Plus size={18} className="rotate-45" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Warehouse Name</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g. Central Hub"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Location</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
-                                    value={formData.location}
-                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                    placeholder="e.g. New York, NY"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Capacity</label>
-                                <input
-                                    type="number"
-                                    required
-                                    min="0"
-                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900"
-                                    value={formData.capacity}
-                                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                                    placeholder="1000"
-                                />
+                        <form onSubmit={handleSubmit} className="flex flex-col">
+
+                            {/* Fields */}
+                            <div className="p-6">
+                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Warehouse Details</p>
+
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Warehouse Name <span className="text-rose-400">*</span></label>
+                                        <input
+                                            type="text"
+                                            required
+                                            className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all placeholder-slate-500"
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            placeholder="e.g. Central Hub"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Location <span className="text-rose-400">*</span></label>
+                                        <div className="relative">
+                                            <MapPin size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                                            <input
+                                                type="text"
+                                                required
+                                                className="block w-full pl-8 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all placeholder-slate-500"
+                                                value={formData.location}
+                                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                                placeholder="e.g. New York, NY"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Capacity <span className="text-rose-400">*</span></label>
+                                        <input
+                                            type="number"
+                                            required
+                                            min="0"
+                                            className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all placeholder-slate-500"
+                                            value={formData.capacity}
+                                            onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
+                                            placeholder="1000"
+                                        />
+                                        <p className="text-[10px] text-slate-400 mt-1.5">Total storage units this warehouse can hold.</p>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-                                >
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 border border-slate-200 rounded-xl text-slate-600 text-sm font-semibold hover:bg-white transition-colors">
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/25"
-                                >
-                                    Create warehouse
+                                <button type="submit" className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2">
+                                    <Plus size={15} strokeWidth={2.5} />
+                                    Create Warehouse
                                 </button>
                             </div>
+
                         </form>
                     </div>
                 </div>
