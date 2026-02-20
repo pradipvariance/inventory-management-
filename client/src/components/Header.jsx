@@ -101,18 +101,32 @@ const Header = () => {
         }
     };
 
+    const dashboardTitles = {
+        SUPER_ADMIN: 'Global Control Center',
+        INVENTORY_MANAGER: 'Inventory Command Hub',
+        WAREHOUSE_ADMIN: 'Warehouse Operations',
+        SUPPLIER: 'Supplier Fulfillment Portal',
+        CUSTOMER: 'Customer Experience'
+    };
+
     return (
         <header className="bg-white h-16 flex items-center justify-between px-8 z-20 sticky top-0 border-b border-gray-200 shadow-sm">
-            {/* Left Side - Welcome Message */}
+            {/* Left Side - Dashboard Title & Context */}
             <div className="flex flex-col">
+                <h1 className="text-lg font-black text-gray-900 tracking-tight leading-none mb-1 uppercase">
+                    {dashboardTitles[user?.role] || 'Dashboard'}
+                </h1>
                 {user?.warehouse?.name ? (
-                    <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Warehouse:</span>
-                        <h2 className="text-base font-bold text-gray-800 tracking-tight">{user.warehouse.name}</h2>
+                    <div className="flex items-center gap-1.5 ml-0.5">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">
+                            {user.warehouse.name} HUB
+                        </span>
                     </div>
                 ) : (
-                    <h2 className="text-lg font-bold text-gray-800 tracking-tight">Overview</h2>
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] ml-0.5">
+                        Central Intelligence
+                    </span>
                 )}
             </div>
 
