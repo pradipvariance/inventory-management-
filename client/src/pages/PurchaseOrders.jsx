@@ -250,128 +250,137 @@ const PurchaseOrders = () => {
                 </div>
             </div>
 
-            {/* Create order modal - same style as Products modal */}
+            {/* Create Order Modal */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in overflow-y-auto">
-                    <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-scale-in border border-slate-200 relative">
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                            aria-label="Close"
-                        >
-                            <Plus size={24} className="rotate-45" />
-                        </button>
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-fade-in">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl animate-scale-in border border-slate-200 overflow-hidden flex flex-col">
 
-                        <div className="mb-6">
-                            <h2 className="text-xl font-bold text-slate-900">Create purchase order</h2>
-                            <p className="text-slate-500 text-sm mt-0.5">Order products from suppliers to restock inventory.</p>
+                        {/* Header */}
+                        <div className="bg-gradient-to-r from-indigo-600 to-violet-600 px-7 py-4 flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-white/20 text-white flex items-center justify-center shrink-0">
+                                    <FileText size={18} strokeWidth={2} />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-bold text-white">Create Purchase Order</h2>
+                                    <p className="text-indigo-200 text-xs mt-0.5">Order products from suppliers to restock inventory.</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowModal(false)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors" aria-label="Close">
+                                <Plus size={18} className="rotate-45" />
+                            </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Supplier</label>
-                                    <select
-                                        required
-                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900 transition-all"
-                                        value={selectedSupplier}
-                                        onChange={e => setSelectedSupplier(e.target.value)}
-                                    >
-                                        <option value="">Select supplier</option>
-                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Warehouse</label>
-                                    <select
-                                        required
-                                        className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900 transition-all"
-                                        value={selectedWarehouse}
-                                        onChange={e => setSelectedWarehouse(e.target.value)}
-                                    >
-                                        <option value="">Select warehouse</option>
-                                        {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                                    </select>
-                                </div>
-                            </div>
+                        <form onSubmit={handleSubmit} className="flex flex-col">
+                            <div className="p-6 space-y-4">
 
-                            <div>
-                                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Delivery due date</label>
-                                <input
-                                    type="date"
-                                    className="block w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 outline-none text-slate-900 transition-all"
-                                    value={deliveryDate}
-                                    onChange={e => setDeliveryDate(e.target.value)}
-                                />
-                            </div>
-
-                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-200">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h3 className="font-semibold text-slate-900">Order items</h3>
-                                    <button
-                                        type="button"
-                                        onClick={handleAddItem}
-                                        className="text-sm font-semibold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
-                                    >
-                                        <Plus size={16} strokeWidth={2} /> Add item
-                                    </button>
-                                </div>
-                                <div className="space-y-3">
-                                    {poItems.map((item, index) => (
-                                        <div key={index} className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border border-slate-200 items-start sm:items-center">
-                                            <div className="flex-1 w-full">
-                                                <select
-                                                    required
-                                                    className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-sm text-slate-900"
-                                                    value={item.productId}
-                                                    onChange={e => handleItemChange(index, 'productId', e.target.value)}
-                                                >
-                                                    <option value="">Select product</option>
-                                                    {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="flex gap-3 w-full sm:w-auto">
-                                                <div className="w-24">
-                                                    <input
-                                                        type="number"
-                                                        min="1"
-                                                        placeholder="Qty"
-                                                        className="block w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-sm text-slate-900"
-                                                        value={item.quantity}
-                                                        onChange={e => handleItemChange(index, 'quantity', e.target.value)}
-                                                    />
-                                                </div>
-                                                <div className="w-28 relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
-                                                    <input
-                                                        type="number"
-                                                        min="0"
-                                                        step="0.01"
-                                                        placeholder="Cost"
-                                                        className="block w-full pl-6 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none text-sm text-slate-900"
-                                                        value={item.unitCost}
-                                                        onChange={e => handleItemChange(index, 'unitCost', e.target.value)}
-                                                    />
-                                                </div>
-                                            </div>
+                                {/* Order Details card */}
+                                <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 space-y-4">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Order Details</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Supplier <span className="text-rose-400">*</span></label>
+                                            <select
+                                                required
+                                                className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all"
+                                                value={selectedSupplier}
+                                                onChange={e => setSelectedSupplier(e.target.value)}
+                                            >
+                                                <option value="">Select supplier</option>
+                                                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                            </select>
                                         </div>
-                                    ))}
+                                        <div>
+                                            <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Warehouse <span className="text-rose-400">*</span></label>
+                                            <select
+                                                required
+                                                className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all"
+                                                value={selectedWarehouse}
+                                                onChange={e => setSelectedWarehouse(e.target.value)}
+                                            >
+                                                <option value="">Select warehouse</option>
+                                                {warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-semibold text-slate-600 uppercase tracking-wider mb-1">Delivery Due Date</label>
+                                            <input
+                                                type="date"
+                                                className="block w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all"
+                                                value={deliveryDate}
+                                                onChange={e => setDeliveryDate(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Order Items card */}
+                                <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-violet-50/50 p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[10px] font-bold text-indigo-800 uppercase tracking-widest flex items-center gap-2">
+                                            <span className="w-1.5 h-3.5 bg-indigo-500 rounded-full" />
+                                            Order Items
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={handleAddItem}
+                                            className="text-xs font-semibold text-indigo-600 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 border border-indigo-200"
+                                        >
+                                            <Plus size={13} strokeWidth={2.5} /> Add item
+                                        </button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {poItems.map((item, index) => (
+                                            <div key={index} className="flex flex-col sm:flex-row gap-2 bg-white p-3 rounded-xl border border-slate-200 items-start sm:items-center">
+                                                <div className="flex-1 w-full">
+                                                    <select
+                                                        required
+                                                        className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all"
+                                                        value={item.productId}
+                                                        onChange={e => handleItemChange(index, 'productId', e.target.value)}
+                                                    >
+                                                        <option value="">Select product</option>
+                                                        {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                    </select>
+                                                </div>
+                                                <div className="flex gap-2 w-full sm:w-auto">
+                                                    <div className="w-24">
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            placeholder="Qty"
+                                                            className="block w-full px-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all placeholder-slate-500"
+                                                            value={item.quantity}
+                                                            onChange={e => handleItemChange(index, 'quantity', e.target.value)}
+                                                        />
+                                                    </div>
+                                                    <div className="w-28 relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">$</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            placeholder="Cost"
+                                                            className="block w-full pl-6 pr-3 py-2 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none text-sm text-slate-900 transition-all placeholder-slate-500"
+                                                            value={item.unitCost}
+                                                            onChange={e => handleItemChange(index, 'unitCost', e.target.value)}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="px-6 py-3 border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-slate-50 transition-colors"
-                                >
+                            {/* Footer */}
+                            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
+                                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 border border-slate-200 rounded-xl text-slate-600 text-sm font-semibold hover:bg-white transition-colors">
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors shadow-md shadow-indigo-500/25"
-                                >
-                                    Create order
+                                <button type="submit" className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-700 hover:to-violet-700 transition-all shadow-lg shadow-indigo-500/30 flex items-center gap-2">
+                                    <Plus size={15} strokeWidth={2.5} />
+                                    Create Order
                                 </button>
                             </div>
                         </form>
