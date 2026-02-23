@@ -12,6 +12,7 @@ const httpServer = createServer(app);
 const io = initSocket(httpServer);
 const PORT = process.env.PORT || 5000;
 
+// build-in middleware 
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
@@ -27,6 +28,7 @@ import supplierRoutes from './routes/supplierRoutes.js';
 import purchaseOrderRoutes from './routes/purchaseOrderRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 
+// routes 
 app.use('/api/auth', authRoutes);
 app.use('/api/warehouses', warehouseRoutes);
 app.use('/api/products', productRoutes);
